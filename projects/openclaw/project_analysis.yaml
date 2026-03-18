@@ -1,0 +1,109 @@
+project:
+  name: openclaw
+  path: ~
+structure:
+  type: single
+  modules: []
+  total_files: 8617
+  source_files: 4237
+  test_files: 2945
+  config_files: 215
+  lines_of_code: 1369663
+  directories:
+  - .agents
+  - Swabble
+  - Swabble/.github
+  - Swabble/.github/workflows
+  - Swabble/Sources
+  - Swabble/Sources/SwabbleCore
+  - Swabble/Sources/SwabbleKit
+  - Swabble/Sources/swabble
+  - Swabble/Tests
+  - Swabble/Tests/SwabbleKitTests
+  - Swabble/Tests/swabbleTests
+  - Swabble/docs
+  - Swabble/scripts
+  - changelog
+  - changelog/fragments
+  - docs
+  - docs/.generated
+  - docs/cli
+  - docs/design
+  - docs/experiments
+  - docs/experiments/plans
+  - docs/experiments/proposals
+  - docs/experiments/research
+  - docs/images
+  - docs/install
+  - docs/nodes
+  - docs/platforms
+  - docs/platforms/mac
+  - docs/plugins
+  - docs/providers
+  - docs/security
+  - docs/start
+  - docs/tools
+  - docs/web
+  - git-hooks
+  - patches
+  - test
+  - test/fixtures
+  - test/fixtures/child-process-bridge
+  - test/fixtures/hooks-install
+  - test/fixtures/plugins-install
+  - test/helpers
+  - test/mocks
+  - test/scripts
+  - ui
+  - ui/public
+  - ui/src
+  - ui/src/i18n
+  - ui/src/styles
+  - ui/src/ui
+languages:
+  primary: javascript
+  breakdown:
+    typescript: 6421
+    swift: 602
+    json: 163
+    kotlin: 115
+    yaml: 33
+    go: 17
+    javascript: 15
+    css: 14
+    xml: 12
+    python: 12
+    html: 5
+  primary_source: framework_detection
+build:
+  tool: npm
+  commands:
+    build: npm run build
+    test: npm test
+    install: npm install
+frameworks:
+- name: express
+  language: javascript
+  markers_found:
+  - express
+- name: nextjs
+  language: typescript
+  markers_found:
+  - next
+testing:
+  has_tests: true
+  test_files: 2945
+  source_files: 4237
+  frameworks:
+  - vitest
+  estimated_coverage: ~69%
+infrastructure:
+  docker: true
+  docker_compose: true
+  ci_cd: github-actions
+  containerized: true
+  environments:
+  - .env.example
+conventions:
+  architecture: unknown
+  layers: []

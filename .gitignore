@@ -78,6 +78,7 @@ desktop.ini
 # Bootstrap/Pipeline 결과물 (프로젝트별 분석, 설정, 로그)
 projects/*/
 !projects/.gitkeep
+!projects/openclaw/
 
 # ──────────────────────────────────────────
 # Streamlit

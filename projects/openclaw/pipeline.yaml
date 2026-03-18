@@ -1,0 +1,61 @@
+project:
+  name: openclaw
+  path: ~
+  language: javascript
+  framework: express
+  build_command: npm run build
+  test_command: npm test
+nodes:
+  analyze_requirements:
+    executor: api
+    prompt_template: prompts/analyze_requirements.md
+  generate_design:
+    executor: console
+    prompt_template: prompts/generate_design.md
+  develop_code:
+    executor: console
+    prompt_template: prompts/develop_code.md
+  write_tests:
+    executor: console
+    prompt_template: prompts/write_tests.md
+  build:
+    executor: tool
+    command: npm run build
+  run_tests:
+    executor: tool
+    command: npm test
+  fix_code:
+    executor: console
+    prompt_template: prompts/develop_code.md
+  code_review:
+    executor: api
+    prompt_template: prompts/code_review.md
+  review_quality:
+    executor: api
+    prompt_template: prompts/code_review.md
+  review_security:
+    executor: api
+    prompt_template: prompts/code_review.md
+  apply_review_fixes:
+    executor: console
+    prompt_template: prompts/develop_code.md
+  generate_docs:
+    executor: api
+    prompt_template: prompts/generate_docs.md
+  generate_api_doc:
+    executor: api
+    prompt_template: prompts/generate_docs.md
+  generate_ops_manual:
+    executor: api
+    prompt_template: prompts/generate_docs.md
+  generate_changelog:
+    executor: api
+    prompt_template: prompts/generate_docs.md
+cycles:
+  build_test:
+    max_retries: 5
+  code_review:
+    max_retries: 3
+human_checkpoints:
+- after: generate_design
+- after: code_review
