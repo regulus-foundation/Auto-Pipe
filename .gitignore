@@ -1,0 +1,102 @@
+# ──────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+examples/
+CLAUDE.md
+
+# Virtual environment
+venv/
+.venv/
+env/
+.python-version
+
+# ──────────────────────────────────────────
+# Secrets / Credentials
+# ──────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+*.pfx
+*.crt
+*.cert
+*.secret
+credentials.json
+service-account*.json
+token.json
+*_rsa
+*_ecdsa
+*_ed25519
+*.gpg
+
+# Terraform secrets
+*.tfvars
+!*.tfvars.example
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Ansible secrets
+*.vault
+vault-password*
+
+# Kubernetes secrets
+kubeconfig
+*-kubeconfig.yaml
+
+# ──────────────────────────────────────────
+# IDE
+# ──────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ──────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ──────────────────────────────────────────
+# Auto-Pipe: 프로젝트별 생성 파일
+# ──────────────────────────────────────────
+# Bootstrap/Pipeline 결과물 (프로젝트별 분석, 설정, 로그)
+projects/*/
+!projects/.gitkeep
+
+# ──────────────────────────────────────────
+# Streamlit
+# ──────────────────────────────────────────
+.streamlit/
+
+# ──────────────────────────────────────────
+# Jupyter
+# ──────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ──────────────────────────────────────────
+# Logs / Temp
+# ──────────────────────────────────────────
+*.log
+tmp/
+temp/
+
+# ──────────────────────────────────────────
+# Docker (로컬 빌드 산출물)
+# ──────────────────────────────────────────
+docker-compose.override.yml

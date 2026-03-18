@@ -1,0 +1,19 @@
+# LangGraph + LangChain
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-openai>=0.3.0
+
+# LangGraph Checkpointer (PostgreSQL)
+langgraph-checkpoint-postgres>=2.0.0
+psycopg[binary]>=3.0.0
+
+# Web UI
+streamlit>=1.30.0
+
+# Observability
+langfuse>=2.0.0
+
+# Config / Util
+pyyaml>=6.0
+python-dotenv>=1.0.0
