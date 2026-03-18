@@ -1,0 +1,988 @@
+[BOOTSTRAP] openclaw
+Started: 2026-03-18T17:52:54.345823
+============================================================
+[17:52:55] ── Step 1/4: 의존성 & 빌드 분석 시작 ──
+[17:54:09] # OpenClaw 프로젝트 빌드/의존성 분석
+[17:54:09] 
+[17:54:09] ## 1. 의존성 분석
+[17:54:09] 
+[17:54:09] ### 핵심 의존성 및 역할
+[17:54:09] 
+[17:54:09] **메시징 채널 통합 (핵심 도메인)**
+[17:54:09] | 패키지 | 용도 |
+[17:54:09] |---------|------|
+[17:54:09] | `grammy` + `@grammyjs/*` | Telegram 봇 |
+[17:54:09] | `@buape/carbon` | Discord 봇 (고정 버전, 업데이트 금지 정책) |
+[17:54:09] | `discord-api-types`, `@discordjs/voice` | Discord API 타입 + 음성 |
+[17:54:09] | `@slack/bolt`, `@slack/web-api` | Slack 통합 |
+[17:54:09] | `@whiskeysockets/baileys` | WhatsApp (비공식 Web API) |
+[17:54:09] | `@line/bot-sdk` | LINE 메신저 |
+[17:54:09] | `@larksuiteoapi/node-sdk` | Feishu/Lark |
+[17:54:09] 
+[17:54:09] **AI/LLM 통합**
+[17:54:09] | 패키지 | 용도 |
+[17:54:09] |---------|------|
+[17:54:09] | `@mariozechner/pi-*` (4개) | Pi AI 에이전트 코어/코딩/TUI |
+[17:54:09] | `@aws-sdk/client-bedrock` | AWS Bedrock LLM |
+[17:54:09] | `@modelcontextprotocol/sdk` | MCP 프로토콜 연동 |
+[17:54:09] | `node-llama-cpp` (peer, optional) | 로컬 LLM 실행 |
+[17:54:09] | `@agentclientprotocol/sdk` | ACP 에이전트 프로토콜 |
+[17:54:09] 
+[17:54:09] **웹/서버**
+[17:54:09] | 패키지 | 용도 |
+[17:54:09] |---------|------|
+[17:54:09] | `express` (v5) | HTTP 서버 (게이트웨이) |
+[17:54:09] | `hono` | 경량 HTTP 프레임워크 (오버라이드로 `4.12.7` 고정) |
+[17:54:09] | `ws` | WebSocket |
+[17:54:09] | `undici` | HTTP 클라이언트 |
+[17:54:09] | `playwright-core` | 브라우저 자동화/웹 스크래핑 |
+[17:54:09] 
+[17:54:09] **미디어/데이터 처리**
+[17:54:09] | 패키지 | 용도 |
+[17:54:09] |---------|------|
+[17:54:09] | `sharp` | 이미지 처리 |
+[17:54:09] | `pdfjs-dist` | PDF 파싱 |
+[17:54:09] | `@lancedb/lancedb` + `sqlite-vec` | 벡터 DB (메모리/RAG) |
+[17:54:09] | `opusscript` | 음성 코덱 (Discord voice) |
+[17:54:09] | `node-edge-tts` | TTS (텍스트→음성) |
+[17:54:09] 
+[17:54:09] **CLI/터미널**
+[17:54:09] | 패키지 | 용도 |
+[17:54:09] |---------|------|
+[17:54:09] | `commander` | CLI 커맨드 파싱 |
+[17:54:09] | `@clack/prompts` | 인터랙티브 CLI 프롬프트 |
+[17:54:09] | `chalk` | 터미널 색상 |
+[17:54:09] | `qrcode-terminal` | QR 코드 (WhatsApp 페어링 등) |
+[17:54:09] | `@lydell/node-pty` | 의사 터미널 (에이전트 실행) |
+[17:54:09] 
+[17:54:09] ### 버전 상태 및 보안 이슈 가능성
+[17:54:09] 
+[17:54:09] **고정 버전 (오버라이드 강제)**  
+[17:54:09] `package.json:269-282`에서 pnpm overrides로 보안 취약 패키지를 강제 교체:
+[17:54:09] - `request` → `@cypress/request@3.0.10` (deprecated 패키지 대체)
+[17:54:09] - `request-promise` → `@cypress/request-promise@5.0.0`
+[17:54:09] - `node-domexception` → `@nolyfill/domexception` (polyfill 교체)
+[17:54:09] - `fast-xml-parser` → `5.3.8`, `tough-cookie` → `4.1.3`, `yauzl` → `3.2.1` (보안 패치 고정)
+[17:54:09] - `tar` → `7.5.11` (CVE 대응으로 추정)
+[17:54:09] 
+[17:54:09] **주의 필요 항목:**
+[17:54:09] - `@whiskeysockets/baileys: 7.0.0-rc.9` — RC 버전 사용 중, 비공식 WhatsApp 라이브러리라 API 변경/차단 리스크
+[17:54:09] - `@buape/carbon: 0.0.0-beta-20260216184201` — 베타 프리릴리스, 업데이트 금지 정책 명시
+[17:54:09] - `sqlite-vec: 0.1.7-alpha.2` — 알파 버전
+[17:54:09] - `@lydell/node-pty: 1.2.0-beta.3` — 베타, 네이티브 바인딩
+[17:54:09] - `@sinclair/typebox: 0.34.48` — overrides에도 동일 버전 고정 (호환성 문제 방지)
+[17:54:09] 
+[17:54:09] ### 불필요/중복 가능성
+[17:54:09] 
+[17:54:09] - `express` (v5) + `hono` — 두 HTTP 프레임워크 공존. Express는 게이트웨이 메인, Hono는 경량 라우팅용으로 분리 사용 추정. 장기적으로 통합 검토 가능.
+[17:54:09] - `zod` (v4) + `@sinclair/typebox` — 두 스키마 검증 라이브러리 공존. Typebox는 MCP/프로토콜 스키마, Zod는 일반 검증용으로 분리된 것으로 보이나 중복 영역 존재 가능.
+[17:54:09] - `linkedom` + `jsdom` (dev) — DOM 파싱 라이브러리 2개. linkedom은 프로덕션(경량), jsdom은 테스트용.
+[17:54:09] 
+[17:54:09] ---
+[17:54:09] 
+[17:54:09] ## 2. 빌드 구조
+[17:54:09] 
+[17:54:09] ### 빌드 파이프라인 (`package.json:48-50`)
+[17:54:09] 
+[17:54:09] ```
+[17:54:09] build = canvas:a2ui:bundle
+[17:54:09]       → tsdown-build.mjs          (번들링)
+[17:54:09]       → runtime-postbuild.mjs     (런타임 후처리)
+[17:54:09]       → build:plugin-sdk:dts      (플러그인 SDK 타입 생성, tsc)
+[17:54:09]       → write-plugin-sdk-entry-dts
+[17:54:09]       → canvas-a2ui-copy
+[17:54:09]       → copy-hook-metadata
+[17:54:09]       → copy-export-html-templates
+[17:54:09]       → write-build-info
+[17:54:09]       → write-cli-startup-metadata
+[17:54:09]       → write-cli-compat
+[17:54:09] ```
+[17:54:09] 
+[17:54:09] **특이사항:**
+[17:54:09] - **tsdown** (`tsdown: 0.21.2`)을 번들러로 사용 — esbuild 기반이지만 rolldown으로 전환 중인 도구
+[17:54:09] - **build:docker** — `canvas:a2ui:bundle` 스킵 (Docker에서는 A2UI 프론트엔드 번들 불필요)
+[17:54:09] - **build:plugin-sdk:dts** — `tsc -p tsconfig.plugin-sdk.dts.json || true`로 타입 생성 실패를 무시 (`package.json:51`)
+[17:54:09] - **prepack** — `pnpm build && pnpm ui:build`로 npm publish 전 자동 빌드
+[17:54:09] 
+[17:54:09] ### 모듈 구조
+[17:54:09] 
+[17:54:09] **플러그인 아키텍처:**  
+[17:54:09] `package.json:14-165`의 `exports` 맵이 핵심. `openclaw/plugin-sdk/*` 경로로 40개+ 서브 모듈을 노출:
+[17:54:09] - 각 채널별 SDK (`telegram`, `discord`, `slack`, `signal`, `imessage`, `whatsapp`, `line`, `msteams`, `matrix` 등)
+[17:54:09] - 기능별 SDK (`voice-call`, `memory-core`, `memory-lancedb`, `diffs`, `llm-task`, `thread-ownership` 등)
+[17:54:09] - 플러그인은 `extensions/` 디렉토리에 워크스페이스 패키지로 존재
+[17:54:09] 
+[17:54:09] **TypeScript 설정 (`tsconfig.json`):**
+[17:54:09] - `module: NodeNext` + `moduleResolution: NodeNext` — ESM 네이티브
+[17:54:09] - `target: es2023` — 최신 JS 타겟 (Node 22+ 요구와 일치)
+[17:54:09] - `paths` 매핑으로 `openclaw/plugin-sdk` → `src/plugin-sdk/`로 개발 시 해석
+[17:54:09] - `noEmit: true` — tsc는 타입 체크 전용, 실제 빌드는 tsdown 담당
+[17:54:09] 
+[17:54:09] ### 프로파일/환경 설정
+[17:54:09] 
+[17:54:09] - **테스트 프로파일:** `OPENCLAW_TEST_PROFILE=low`, `OPENCLAW_TEST_SERIAL_GATEWAY=1` (메모리 제한 환경)
+[17:54:09] - **채널 스킵:** `OPENCLAW_SKIP_CHANNELS=1` (게이트웨이 개발 시 채널 로드 생략)
+[17:54:09] - **라이브 테스트:** `OPENCLAW_LIVE_TEST=1` + `LIVE=1` (실제 API 키 필요)
+[17:54:09] - **타입 체커:** `pnpm tsgo` — `@typescript/native-preview` (Go로 작성된 실험적 TS 컴파일러) 사용
+[17:54:09] 
+[17:54:09] ---
+[17:54:09] 
+[17:54:09] ## 3. 외부 연동
+[17:54:09] 
+[17:54:09] ### 데이터베이스/저장소
+[17:54:09] 
+[17:54:09] | 기술 | 근거 | 용도 |
+[17:54:09] |------|------|------|
+[17:54:09] | **SQLite** (+ sqlite-vec) | `dependencies: "sqlite-vec"` | 로컬 데이터 저장 + 벡터 검색 |
+[17:54:09] | **LanceDB** | `dependencies: "@lancedb/lancedb"` | 벡터 DB (메모리/RAG 파이프라인) |
+[17:54:09] 
+[17:54:09] 순수 로컬 임베디드 DB만 사용 — PostgreSQL/MySQL 등 외부 RDBMS 의존 없음.
+[17:54:09] 
+[17:54:09] ### 외부 API/서비스
+[17:54:09] 
+[17:54:09] | 서비스 | 패키지/근거 |
+[17:54:09] |--------|-------------|
+[17:54:09] | **AWS Bedrock** | `@aws-sdk/client-bedrock` |
+[17:54:09] | **Telegram API** | `grammy` |
+[17:54:09] | **Discord API** | `@buape/carbon`, `discord-api-types` |
+[17:54:09] | **Slack API** | `@slack/bolt`, `@slack/web-api` |
+[17:54:09] | **WhatsApp (비공식)** | `@whiskeysockets/baileys` |
+[17:54:09] | **LINE API** | `@line/bot-sdk` |
+[17:54:09] | **Feishu/Lark API** | `@larksuiteoapi/node-sdk` |
+[17:54:09] | **MCP 서버** | `@modelcontextprotocol/sdk` |
+[17:54:09] | **mDNS (로컬 디스커버리)** | `@homebridge/ciao` |
+[17:54:09] | **Microsoft Edge TTS** | `node-edge-tts` |
+[17:54:09] 
+[17:54:09] ### 네트워크/프록시
+[17:54:09] 
+[17:54:09] - `https-proxy-agent` — 프록시 환경 지원
+[17:54:09] - `ipaddr.js` — IP 주소 파싱/검증 (보안 바인딩 관련)
+[17:54:09] 
+[17:54:09] ### 환경별 설정 차이
+[17:54:09] 
+[17:54:09] CLAUDE.md에서 확인되는 구분:
+[17:54:09] - **로컬 개발:** `gateway.mode=local`, `~/.openclaw/credentials/`에 인증 정보 저장
+[17:54:09] - **Docker:** `build:docker` 스크립트 별도, A2UI 번들 생략
+[17:54:09] - **CI:** `deadcode:ci`, `test:sectriage` 등 CI 전용 스크립트
+[17:54:09] - **Parallels VM 테스트:** macOS/Windows/Linux 각각 별도 smoke 테스트 하네스
+[17:54:09] - **Fly.io 배포:** CLAUDE.md에 `fly ssh console -a flawd-bot` 배포 명령 기록
+[17:54:09] 
+[17:54:09] ### Python 설정 (`pyproject.toml`)
+[17:54:09] 
+[17:54:09] - `skills/` 디렉토리의 Python 스킬 테스트용 (Ruff linter + pytest)
+[17:54:09] - 메인 프로젝트와 별도 — 보조적 스킬 스크립트 용도
+[17:54:09] 
+[17:54:09] ---
+[17:54:09] 
+[17:54:09] ## 요약 판단
+[17:54:09] 
+[17:54:09] **강점:** 플러그인 SDK 아키텍처가 잘 설계되어 40개+ 채널/기능을 독립적으로 확장 가능. pnpm overrides로 보안 취약 의존성을 적극 관리.
+[17:54:09] 
+[17:54:09] **리스크:** RC/alpha/beta 네이티브 패키지 다수(`baileys`, `node-pty`, `sqlite-vec`, `carbon`) — 프로덕션 안정성 주의. Express v5 + Hono 이중 프레임워크, Zod + Typebox 이중 스키마 검증은 장기적 통합 후보.
+[17:54:09] ── Step 2/4: 아키텍처 & 코드 패턴 분석 시작 ──
+[17:56:01] # OpenClaw 프로젝트 핵심 소스 코드 분석
+[17:56:01] 
+[17:56:01] ## 1. 아키텍처 패턴
+[17:56:01] 
+[17:56:01] ### 사용 패턴: **Plugin-based Modular Monolith + Gateway 패턴**
+[17:56:01] 
+[17:56:01] 전통적인 레이어드/클린 아키텍처가 아닌, **게이트웨이 중심의 플러그인 아키텍처**를 채택하고 있습니다.
+[17:56:01] 
+[17:56:01] **핵심 구조:**
+[17:56:01] 
+[17:56:01] ```
+[17:56:01] [Channels/Extensions]  →  [Gateway Server]  →  [Agent Runtime]
+[17:56:01]   (telegram, discord,       (WebSocket,         (pi-agent-core,
+[17:56:01]    signal, iOS, web)         HTTP, RPC)          pi-coding-agent)
+[17:56:01]         ↓                       ↓                     ↓
+[17:56:01]   [Config/Sessions]        [Auth/Pairing]        [Tools/Skills]
+[17:56:01]    (JSON file store)       (Device identity,     (web-search, browser,
+[17:56:01]                             TLS fingerprint)      file ops)
+[17:56:01] ```
+[17:56:01] 
+[17:56:01] **레이어 간 의존 방향:**
+[17:56:01] 
+[17:56:01] - **Controller 레이어** (`extensions/telegram/src/bot-handlers.ts`, `src/gateway/server/ws-connection/message-handler.ts`): 인바운드 메시지를 수신하고 라우팅. 내부 서비스 모듈을 직접 import
+[17:56:01] - **Service 레이어** (`src/cron/service/timer.ts`, `src/cron/service/jobs.ts`): 비즈니스 로직 수행. State 객체를 통한 의존성 주입
+[17:56:01] - **Repository 레이어** (`src/config/sessions/store.ts`, `src/pairing/pairing-store.ts`): JSON 파일 기반 영속화. 파일 잠금(`withFileLock`) 기반 동시성 제어
+[17:56:01] - **Middleware 레이어** (`src/agents/pi-extensions/compaction-safeguard.ts`, `src/agents/session-tool-result-guard.ts`): 세션 전사(transcript) 변환, 도구 결과 가드
+[17:56:01] 
+[17:56:01] **의존 방향 문제점:** Controller가 서비스/유틸을 직접 import하는 flat한 구조입니다. `bot-handlers.ts`가 20개 이상의 내부 모듈을 직접 import하는 것이 대표적 (`bot-handlers.ts:1-68`). Hexagonal이나 Clean Architecture의 포트/어댑터 경계가 명확하지 않습니다.
+[17:56:01] 
+[17:56:01] **관심사 분리 수준:** **중간**. 채널별 분리(extensions/*)는 잘 되어 있으나, 각 채널 핸들러 내부에서 config, session, routing, pairing 등 횡단 관심사를 직접 호출합니다.
+[17:56:01] 
+[17:56:01] ---
+[17:56:01] 
+[17:56:01] ## 2. 코드 컨벤션
+[17:56:01] 
+[17:56:01] ### 네이밍 규칙
+[17:56:01] 
+[17:56:01] **TypeScript (서버):**
+[17:56:01] - **함수:** camelCase, `resolve/build/compute/normalize` 접두사가 지배적
+[17:56:01]   - `resolveInboundMediaFileId()`, `buildSyntheticTextMessage()`, `computeJobNextRunAtMs()`, `normalizeAllowEntry()`
+[17:56:01] - **상수:** UPPER_SNAKE_CASE
+[17:56:01]   - `MEDIA_GROUP_TIMEOUT_MS`, `MAX_PREAUTH_PAYLOAD_BYTES`, `DEFAULT_BACKOFF_SCHEDULE_MS`
+[17:56:01] - **타입/인터페이스:** PascalCase
+[17:56:01]   - `TelegramMediaRef`, `CronRunOutcome`, `SessionEntry`, `GatewayWsClient`
+[17:56:01] - **Boolean 함수:** `is/has/should` 접두사
+[17:56:01]   - `isMediaSizeLimitError()`, `hasInboundMedia()`, `shouldDebounceTextInbound()`
+[17:56:01] - **파일명:** kebab-case (`bot-handlers.ts`, `session-tool-result-guard.ts`, `compaction-safeguard.ts`)
+[17:56:01] 
+[17:56:01] **Swift (iOS/macOS):**
+[17:56:01] - **클래스:** PascalCase with 제품명 접두사 — `GatewayConnectionController`, `NodeAppModel`, `PortGuardian`
+[17:56:01] - **프로퍼티:** camelCase — `gatewayStatusText`, `pendingTrustPrompt`, `didAutoConnect`
+[17:56:01] - **Enum:** PascalCase 케이스 — `LastGatewayKind.manual`, `CameraHUDKind.recording`
+[17:56:01] - **Protocol:** `-ing`/`-able` 접미사 — `WebSocketTasking`, `WebSocketSessioning`, `CameraServicing`, `LocationServicing`
+[17:56:01] 
+[17:56:01] ### DI(의존성 주입) 패턴
+[17:56:01] 
+[17:56:01] **TypeScript:** 두 가지 패턴이 공존:
+[17:56:01] 
+[17:56:01] 1. **State 객체 주입** (서비스 레이어): `CronServiceState`에 deps를 묶어서 전달
+[17:56:01]    ```typescript
+[17:56:01]    // src/cron/service/timer.ts
+[17:56:01]    export async function executeJobCoreWithTimeout(
+[17:56:01]      state: CronServiceState,  // deps.log, deps.cronConfig 등 포함
+[17:56:01]      job: CronJob,
+[17:56:01]    )
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] 2. **매개변수 객체 주입** (컨트롤러 레이어): `RegisterTelegramHandlerParams`처럼 named parameter 객체로 전달
+[17:56:01]    ```typescript
+[17:56:01]    // extensions/telegram/src/bot-handlers.ts
+[17:56:01]    export const registerTelegramHandlers = ({
+[17:56:01]      cfg, accountId, bot, opts, telegramTransport, runtime, ...
+[17:56:01]    }: RegisterTelegramHandlerParams) => {
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] **Swift:** **Protocol + Init 주입** 패턴
+[17:56:01] ```swift
+[17:56:01] // apps/ios/Sources/Model/NodeAppModel.swift
+[17:56:01] init(
+[17:56:01]     screen: ScreenController = ScreenController(),
+[17:56:01]     camera: any CameraServicing = CameraController(),
+[17:56:01]     locationService: any LocationServicing = LocationService(),
+[17:56:01]     notificationCenter: NotificationCentering = LiveNotificationCenter(),
+[17:56:01]     // ... 10개 이상의 프로토콜 기반 주입
+[17:56:01] )
+[17:56:01] ```
+[17:56:01] 
+[17:56:01] ### 응답/공통 패턴
+[17:56:01] 
+[17:56:01] - **Gateway 프로토콜:** `RequestFrame`, `ResponseFrame`, `EventFrame` 구조 (`GatewayModels.swift`)
+[17:56:01]   - `ResponseFrame.ok: Bool` + `payload/error` 패턴
+[17:56:01]   - 프로토콜 버전 관리: `GATEWAY_PROTOCOL_VERSION = 3`
+[17:56:01] - **에러 코드 열거형:** `ErrorCode` enum (`NOT_LINKED`, `NOT_PAIRED`, `AGENT_TIMEOUT` 등)
+[17:56:01] - **JSON RPC 스타일:** `{ type: "request", id, method, params }` → `{ type: "response", id, ok, payload }`
+[17:56:01] 
+[17:56:01] ### 예외 처리 방식
+[17:56:01] 
+[17:56:01] **글로벌 핸들러:**
+[17:56:01] ```typescript
+[17:56:01] // src/index.ts
+[17:56:01] installUnhandledRejectionHandler();
+[17:56:01] process.on("uncaughtException", (error) => {
+[17:56:01]   console.error("[openclaw] Uncaught exception:", formatUncaughtError(error));
+[17:56:01]   process.exit(1);
+[17:56:01] });
+[17:56:01] ```
+[17:56:01] 
+[17:56:01] **Per-function 가드 패턴 (지배적):**
+[17:56:01] ```typescript
+[17:56:01] // src/cron/service/timer.ts — 에러를 문자열로 변환하여 상태에 기록
+[17:56:01] function isTransientCronError(error: string | undefined, retryOn?: CronRetryOn[]): boolean {
+[17:56:01]   // 정규식 기반 에러 분류
+[17:56:01]   const keys = retryOn?.length ? retryOn : (Object.keys(TRANSIENT_PATTERNS) as CronRetryOn[]);
+[17:56:01]   return keys.some((k) => TRANSIENT_PATTERNS[k]?.test(error));
+[17:56:01] }
+[17:56:01] ```
+[17:56:01] 
+[17:56:01] **Swift:** `do/catch` + 로거 조합, 실패 시 `nil` 반환 또는 `Result<T, Error>` 사용
+[17:56:01] 
+[17:56:01] ### 검증/유효성 검사 방식
+[17:56:01] 
+[17:56:01] - **런타임 타입 가드 함수:** `isSessionStoreRecord()`, `isFiniteTimestamp()`, `isRecoverableMediaGroupError()`
+[17:56:01] - **TypeBox 스키마:** 도구 정의에 `Type.Object({ query: Type.String(), ... })` 사용 (`web-search-core.ts`)
+[17:56:01] - **Assert 함수:** `assertSupportedJobSpec()`, `assertDeliverySupport()`, `assertMainSessionAgentId()` — 유효하지 않으면 `throw new Error`
+[17:56:01] - **Normalize 패턴:** 입력을 정규화하는 함수가 매우 많음 — `normalizeAllowEntry()`, `normalizeStoreSessionKey()`, `normalizeCronMessageChannel()`, `normalizeHttpWebhookUrl()`
+[17:56:01] 
+[17:56:01] ---
+[17:56:01] 
+[17:56:01] ## 3. 코드 품질
+[17:56:01] 
+[17:56:01] ### 강점
+[17:56:01] 
+[17:56:01] 1. **방어적 프로그래밍이 철저함:** `clampPositiveInt()`, `clampNonNegativeInt()`, `coerceFiniteScheduleNumber()` 등 모든 숫자 입력에 대해 NaN/Infinity/음수 가드가 적용됨. Windows 파일 시스템의 비원자적 쓰기까지 고려한 재시도 로직 (`store.ts:171-189`)
+[17:56:01] 
+[17:56:01] 2. **멀티 플랫폼 일관성:** TypeScript 서버와 Swift 클라이언트 간 프로토콜을 코드 생성으로 동기화 (`GatewayModels.swift` 상단의 "Generated by scripts/protocol-gen-swift.ts — do not edit by hand"). `ConnectParams`, `HelloOk`, `ResponseFrame` 등이 양쪽에서 동일 구조
+[17:56:01] 
+[17:56:01] 3. **보안 의식 높음:** 프록시 헤더 스푸핑 방지 (`message-handler.ts:143-157`), 브라우저 오리진 체크, 디바이스 서명 검증, TLS 핑거프린트 TOFU, Rate limiting, SSRF 정책 등이 게이트웨이 레벨에서 체계적으로 구현
+[17:56:01] 
+[17:56:01] 4. **Cron 엔진의 복원력:** 지수 백오프 (`DEFAULT_BACKOFF_SCHEDULE_MS`), 일시적 오류 감지 (`TRANSIENT_PATTERNS`), 연속 실패 알림 (`emitFailureAlert`), 재시작 시 missed job catch-up 등 운영 환경을 깊이 고려
+[17:56:01] 
+[17:56:01] 5. **테스트 가능한 설계 (Swift):** `any CameraServicing`, `any LocationServicing` 등 모든 외부 의존을 프로토콜로 추상화하여 테스트 시 mock 주입이 용이
+[17:56:01] 
+[17:56:01] ### 약점
+[17:56:01] 
+[17:56:01] 1. **파일/함수 크기 과대:** `bot-handlers.ts`의 import만 68줄이고, `registerTelegramHandlers`는 하나의 클로저 내에 debounce, media group buffering, text fragment buffering, callback query handling 등이 모두 밀집. `NodeAppModel.swift`는 `type_body_length file_length` swiftlint 규칙을 비활성화할 정도로 거대. 분리 지점이 명확함에도 단일 파일에 유지
+[17:56:01] 
+[17:56:01] 2. **타입 안전성 우회:** `as` 캐스팅과 `Record<string, unknown>` 사용이 빈번
+[17:56:01]    ```typescript
+[17:56:01]    // bot-handlers.ts
+[17:56:01]    const forwardMeta = msg as {
+[17:56:01]      forward_origin?: unknown;
+[17:56:01]      forward_from?: unknown;
+[17:56:01]      // ...
+[17:56:01]    };
+[17:56:01]    ```
+[17:56:01]    ```typescript
+[17:56:01]    // session-tool-result-guard.ts
+[17:56:01]    sessionManager.appendMessage = guardedAppend as SessionManager["appendMessage"];
+[17:56:01]    // Monkey-patch
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] 3. **횡단 관심사의 명시적 경계 부재:** `bot-handlers.ts`가 `config`, `sessions`, `pairing`, `routing`, `plugins`, `auto-reply`, `media` 등 거의 모든 내부 모듈을 직접 import. 중간 서비스 계층(facade)이 없어서 변경 영향 범위가 넓음
+[17:56:01] 
+[17:56:01] 4. **Magic number/string 산재:** `1500`(텍스트 프래그먼트 갭), `4000`(프래그먼트 시작 임계), `50_000`(최대 총 문자), `2 * 60 * 60 * 1000`(stuck run) 등이 상수로 추출되었으나, 연관 상수 간의 관계나 의미가 주석 없이는 파악하기 어려움
+[17:56:01] 
+[17:56:01] ### 보안 우려사항
+[17:56:01] 
+[17:56:01] - `monkey-patch` 패턴(`sessionManager.appendMessage = guardedAppend`)은 타입 시스템을 우회하며, 다른 코드가 원본 참조를 보유할 경우 가드를 건너뛸 수 있음
+[17:56:01] - `SHELL_ENV_EXPECTED_KEYS` (`config/io.ts`)에 API 키 목록이 하드코딩되어 있어, 새 프로바이더 추가 시 누락 가능
+[17:56:01] - Keychain 저장소(`GatewaySettingsStore.swift`)에서 실패 시 반환값을 `@discardableResult`로 무시하는 경우가 있어 자격증명 저장 실패를 감지하지 못할 수 있음
+[17:56:01] 
+[17:56:01] ### SOLID 원칙
+[17:56:01] 
+[17:56:01] | 원칙 | 준수 수준 | 근거 |
+[17:56:01] |------|----------|------|
+[17:56:01] | **S** (단일 책임) | **낮음** | `NodeAppModel`이 게이트웨이 연결, 카메라, 음성, 딥링크, 푸시 알림, 화면 녹화 등 모든 것을 관리 |
+[17:56:01] | **O** (개방-폐쇄) | **높음** | 플러그인/확장 시스템이 잘 설계됨. `extensions/*`로 새 채널 추가 시 코어 변경 최소화 |
+[17:56:01] | **L** (리스코프) | **해당없음** | 상속보다 합성 위주 설계로 위반 기회 자체가 적음 |
+[17:56:01] | **I** (인터페이스 분리) | **높음 (Swift)** | `CameraServicing`, `LocationServicing` 등 역할별 프로토콜 잘 분리 |
+[17:56:01] | **D** (의존성 역전) | **낮음 (TS)** / **높음 (Swift)** | TS는 구체 모듈 직접 import, Swift는 프로토콜 기반 추상화 |
+[17:56:01] 
+[17:56:01] ---
+[17:56:01] 
+[17:56:01] ## 4. 코드 생성 시 반드시 따라야 할 규칙
+[17:56:01] 
+[17:56:01] ### 필수 패턴
+[17:56:01] 
+[17:56:01] 1. **함수 네이밍 접두사 엄수:**
+[17:56:01]    - 조회/변환: `resolve*`, `compute*` — `resolveInboundMediaFileId()`, `computeJobNextRunAtMs()`
+[17:56:01]    - 생성/조합: `build*` — `buildSyntheticTextMessage()`, `buildCommandsMessagePaginated()`
+[17:56:01]    - 정규화: `normalize*` — `normalizeStoreSessionKey()`, `normalizeAllowEntry()`
+[17:56:01]    - 검증: `is*/has*/should*` — `isTransientCronError()`, `hasInboundMedia()`, `shouldDebounceTextInbound()`
+[17:56:01]    - 단언: `assert*` — `assertSupportedJobSpec()`, `assertDeliverySupport()`
+[17:56:01] 
+[17:56:01] 2. **숫자 입력은 반드시 가드:**
+[17:56:01]    ```typescript
+[17:56:01]    // 이 패턴을 따를 것
+[17:56:01]    function clampPositiveInt(value: unknown, fallback: number): number {
+[17:56:01]      if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+[17:56:01]      const floored = Math.floor(value);
+[17:56:01]      return floored >= 1 ? floored : fallback;
+[17:56:01]    }
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] 3. **설정 관련 함수는 State/Deps 객체를 통해 의존성 수신:**
+[17:56:01]    ```typescript
+[17:56:01]    // CronServiceState 패턴을 따를 것
+[17:56:01]    function resolveRunConcurrency(state: CronServiceState): number {
+[17:56:01]      const raw = state.deps.cronConfig?.maxConcurrentRuns;
+[17:56:01]      // ...
+[17:56:01]    }
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] 4. **파일 I/O는 atomic write + file lock:**
+[17:56:01]    - `writeTextAtomic()` (store.ts), `writeJsonFileAtomically()` (pairing-store.ts)
+[17:56:01]    - `withFileLock()` 으로 동시 접근 보호
+[17:56:01] 
+[17:56:01] 5. **Swift 프로토콜 기반 DI:** 새 서비스 추가 시 반드시 `any XxxServicing` 프로토콜 정의 후 init 주입
+[17:56:01] 
+[17:56:01] 6. **캐시에는 반드시 TTL과 무효화 메커니즘:**
+[17:56:01]    ```typescript
+[17:56:01]    // store.ts의 패턴: stat 기반 캐시 무효화
+[17:56:01]    const cached = readSessionStoreCache({
+[17:56:01]      storePath, ttlMs: getSessionStoreTtl(),
+[17:56:01]      mtimeMs: currentFileStat?.mtimeMs,
+[17:56:01]      sizeBytes: currentFileStat?.sizeBytes,
+[17:56:01]    });
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] 7. **에러 메시지는 구조화된 문자열:** `"cron: job execution timed out"`, `"unknown cron job id: ${id}"` 형태로 컨텍스트 포함
+[17:56:01] 
+[17:56:01] 8. **도구 스키마는 TypeBox, `Type.Union` 금지:**
+[17:56:01]    ```typescript
+[17:56:01]    // web-search-core.ts 패턴
+[17:56:01]    Type.Object({
+[17:56:01]      query: Type.String({ description: "Search query string." }),
+[17:56:01]      count: Type.Optional(Type.Number({ minimum: 1, maximum: 10 })),
+[17:56:01]    })
+[17:56:01]    ```
+[17:56:01] 
+[17:56:01] ### 절대 하면 안 되는 것
+[17:56:01] 
+[17:56:01] 1. **`@ts-nocheck` 또는 `no-explicit-any` 비활성화 금지** (CLAUDE.md 명시)
+[17:56:01] 
+[17:56:01] 2. **Prototype mutation 금지:** `Class.prototype.method = ...` 대신 명시적 상속/합성 사용. `session-tool-result-guard.ts`의 monkey-patch는 레거시이며 새 코드에서는 허용하지 않음
+[17:56:01] 
+[17:56:01] 3. **동일 모듈에 대해 `await import()` + static `import` 혼용 금지:** lazy loading 필요 시 `*.runtime.ts` 경계 파일 생성
+[17:56:01] 
+[17:56:01] 4. **`Type.Union` / `anyOf` / `oneOf` / `allOf`를 도구 스키마에 사용 금지:** `stringEnum`/`optionalStringEnum` 사용
+[17:56:01] 
+[17:56:01] 5. **`node_modules` 편집 금지**, **Carbon 의존성 업데이트 금지**
+[17:56:01] 
+[17:56:01] 6. **하드코딩 색상 금지:** `src/terminal/palette.ts`의 공유 팔레트 사용
+[17:56:01] 
+[17:56:01] 7. **스트리밍/부분 응답을 외부 메시징 채널에 전송 금지:** 최종 응답만 전달
+[17:56:01] 
+[17:56:01] 8. **`process.env`를 직접 읽는 config 패턴 금지:** `loadConfig()` → `resolveConfigEnvVars()` 파이프라인을 통해야 함
+[17:56:01] 
+[17:56:01] 9. **테스트 워커 16 초과 설정 금지** (CLAUDE.md: "tried already")
+[17:56:01] 
+[17:56:01] 10. **`git stash`, `git worktree`, 브랜치 전환을 명시적 요청 없이 수행 금지** (멀티 에이전트 안전)
+[17:56:02] ── Step 3/4: 테스트 전략 분석 시작 ──
+[17:58:49] # OpenClaw 프로젝트 테스트 전략 분석 및 개선안
+[17:58:49] 
+[17:58:49] ---
+[17:58:49] 
+[17:58:49] ## 1. 현재 테스트 평가
+[17:58:49] 
+[17:58:49] ### 1.1 테스트 커버리지 수준
+[17:58:49] 
+[17:58:49] **커버리지 임계값 (vitest.config.ts 기준):**
+[17:58:49] - Lines/Functions/Statements: 70%, Branches: 55% (V8 provider)
+[17:58:49] 
+[17:58:49] **레이어별 분포:**
+[17:58:49] 
+[17:58:49] | 레이어 | 테스트 파일 수 | 평가 |
+[17:58:49] |--------|-------------|------|
+[17:58:49] | `src/agents/` | ~442 | 충분 |
+[17:58:49] | `src/infra/` | ~253 | 충분 |
+[17:58:49] | `src/gateway/` | ~146 | 보통 (E2E 보완 필요) |
+[17:58:49] | `src/config/` | ~100 | 충분 |
+[17:58:49] | `extensions/` | ~573 | 플러그인별 편차 큼 |
+[17:58:49] | `apps/` (iOS/Android/macOS) | **0** | **심각한 공백** |
+[17:58:49] | `src/cron/service/` | 존재하나 제한적 | timer/jobs 핵심 로직 커버리지 불명확 |
+[17:58:49] 
+[17:58:49] **주요 관찰:**
+[17:58:49] - 커버리지 측정에서 `src/agents/`, `src/gateway/`, `src/channels/`, `src/cli/`, `src/commands/` 등이 **의도적으로 제외**되어 있어, 실질 커버리지가 수치보다 낮을 가능성이 높음
+[17:58:49] - Swift/Kotlin 네이티브 앱 코드(`apps/ios/`, `apps/android/`, `apps/macos/`)는 Vitest 범위 밖이며, 별도 테스트 프레임워크도 확인되지 않음
+[17:58:49] 
+[17:58:49] ### 1.2 테스트 코드 품질
+[17:58:49] 
+[17:58:49] **Mocking 패턴 — 강점:**
+[17:58:49] - `vi.mock()`을 모듈 단위로 일관되게 사용
+[17:58:49] - `extensions/test-utils/plugin-runtime-mock.ts`로 플러그인 런타임을 표준화된 방식으로 모킹
+[17:58:49] - `src/test-utils/`에 36개의 공유 유틸리티 (env, fetch-mock, frozen-time 등) — 재사용성 높음
+[17:58:49] - `test/setup.ts`에서 OAuth 누출 방지, 환경변수 격리, 플러그인 레지스트리 리셋 등 철저한 격리
+[17:58:49] 
+[17:58:49] **Mocking 패턴 — 개선 필요:**
+[17:58:49] 
+[17:58:49] ```typescript
+[17:58:49] // audit.test.ts — stubChannelPlugin이 100줄 이상의 반복적 boilerplate
+[17:58:49] const discordPlugin = stubChannelPlugin({
+[17:58:49]   id: "discord",
+[17:58:49]   label: "Discord",
+[17:58:49]   listAccountIds: (cfg) => { /* 동일 패턴 반복 */ },
+[17:58:49]   resolveAccount: (cfg, accountId) => { /* 동일 패턴 반복 */ },
+[17:58:49] });
+[17:58:49] // slack, telegram, zalouser 전부 거의 동일한 구조 복사
+[17:58:49] ```
+[17:58:49] 
+[17:58:49] → `discordPlugin`, `slackPlugin`, `telegramPlugin`, `zalouserPlugin` 모두 `listAccountIds`와 `resolveAccount`의 구현이 채널 ID만 다르고 로직이 동일. **팩토리 함수로 추출 가능**.
+[17:58:49] 
+[17:58:49] ```typescript
+[17:58:49] // monitor.test.ts — mock 함수가 40개 이상 개별 선언
+[17:58:49] const mockEnqueueSystemEvent = vi.fn();
+[17:58:49] const mockBuildPairingReply = vi.fn(() => "Pairing code: TESTCODE");
+[17:58:49] const mockReadAllowFromStore = vi.fn().mockResolvedValue([]);
+[17:58:49] // ... 30줄 이상 계속
+[17:58:49] ```
+[17:58:49] 
+[17:58:49] → mock이 테스트 파일 상단에 flat하게 나열되어 가독성 저하. **mock fixture object로 그룹화** 필요.
+[17:58:49] 
+[17:58:49] **Assertion 패턴 — 강점:**
+[17:58:49] - `audit.test.ts`의 `hasFinding()`, `expectFinding()`, `expectNoFinding()` 같은 도메인 특화 assertion 헬퍼가 잘 정의됨
+[17:58:49] - E2E 테스트에서 contract 기반 검증 패턴 사용
+[17:58:49] 
+[17:58:49] **Assertion 패턴 — 개선 필요:**
+[17:58:49] - `subagent-announce.format.e2e.test.ts`의 `getSingleAgentCallParams()` 같은 헬퍼가 파일 내부에 inline 정의 — 여러 테스트에서 공유될 수 있는 패턴임에도 전역 유틸로 추출되지 않음
+[17:58:49] 
+[17:58:49] ### 1.3 테스트 네이밍/구조 규칙
+[17:58:49] 
+[17:58:49] **잘 지켜지는 규칙:**
+[17:58:49] - `*.test.ts` (unit), `*.e2e.test.ts` (E2E), `*.live.test.ts` (live) 구분 명확
+[17:58:49] - 소스와 동일 디렉토리에 colocated — 파일 찾기 용이
+[17:58:49] - `describe` 블록으로 기능 단위 그룹핑 일관적
+[17:58:49] 
+[17:58:49] **개선 필요:**
+[17:58:49] - `it` 설명이 때로 구현 디테일을 기술 (`"sends instructional message to main agent with status and findings"`) — 행위/의도 중심으로 전환하면 리팩토링 내성 향상
+[17:58:49] - 일부 테스트 파일이 500줄 이상 (audit.test.ts, monitor.test.ts, loader.test.ts) — setup/fixture 분리로 본문 축소 가능
+[17:58:49] 
+[17:58:49] ---
+[17:58:49] 
+[17:58:49] ## 2. 테스트 부족 영역 (리스크 순)
+[17:58:49] 
+[17:58:49] ### P0 — 즉시 보강 필요 (보안/안정성 직결)
+[17:58:49] 
+[17:58:49] | 영역 | 현황 | 리스크 |
+[17:58:49] |------|------|--------|
+[17:58:49] | `src/gateway/server/ws-connection/message-handler.ts` | 700줄+ 핸들러, 인증·권한·rate limit·TLS 검증 로직 포함. 커버리지 측정 제외 대상 | 인증 우회, 권한 상승 취약점 미탐지 |
+[17:58:49] | `apps/ios/` (GatewayConnectionController 등) | Vitest 범위 밖, XCTest 미확인 | TLS fingerprint 검증, 디바이스 페어링 로직 무검증 |
+[17:58:49] | `src/security/` | audit.test.ts 존재하나 filesystem audit, channel security 플래그가 `false`로 비활성화된 채 테스트 | 실제 파일시스템/채널 보안 감사 경로 미검증 |
+[17:58:49] 
+[17:58:49] ### P1 — 단기 보강 권장 (핵심 비즈니스 로직)
+[17:58:49] 
+[17:58:49] | 영역 | 현황 | 리스크 |
+[17:58:49] |------|------|--------|
+[17:58:49] | `src/cron/service/timer.ts` | `applyJobResult`, `executeJobCoreWithTimeout`, backoff/retry 로직 등 복잡한 상태 머신 포함. 전용 테스트 확인 불가 | 크론 작업 실패 시 무한 루프, 재시도 폭주 |
+[17:58:49] | `extensions/bluebubbles/` | monitor.test.ts 존재하나 webhook 인증 검증, attachment 다운로드 에러 경로 부족 | 악성 webhook 주입, 미디어 처리 장애 |
+[17:58:49] | `src/routing/` | 라우팅 해석 오류 시 메시지가 잘못된 에이전트로 전달 | 메시지 유실/오배달 |
+[17:58:49] | `src/plugins/loader.ts` | loader.test.ts 존재하나 500줄+의 setup, 경로 해석 edge case 부족 | 악성 플러그인 로딩, 경로 주입 |
+[17:58:49] 
+[17:58:49] ### P2 — 중기 개선 (유지보수성)
+[17:58:49] 
+[17:58:49] | 영역 | 현황 |
+[17:58:49] |------|------|
+[17:58:49] | `extensions/` 전반의 에러 핸들링 경로 | happy path 위주 테스트, 네트워크 실패·타임아웃·부분 응답 시나리오 부족 |
+[17:58:49] | `src/agents/subagent-*` | announce flow 테스트 존재하나 동시성 경합, 세션 정리 실패 시나리오 부족 |
+[17:58:49] | `src/infra/device-pairing.ts`, `device-identity.ts` | message-handler.ts에서 호출되나 통합 테스트 부족 |
+[17:58:49] 
+[17:58:49] ---
+[17:58:49] 
+[17:58:49] ## 3. 추천 테스트 전략
+[17:58:49] 
+[17:58:49] ### 3.1 프레임워크 및 설정
+[17:58:49] 
+[17:58:49] | 테스트 유형 | 프레임워크 | 설정 권장 |
+[17:58:49] |------------|----------|----------|
+[17:58:49] | **Unit (TS)** | Vitest (현행 유지) | `pool: "forks"` 유지. 커버리지 제외 대상 축소 — 최소한 `src/gateway/`, `src/agents/`를 측정 범위에 포함 |
+[17:58:49] | **Integration (TS)** | Vitest + gateway E2E harness (현행 유지) | `test/helpers/gateway-e2e-harness.ts` 활용 확대. WebSocket 프로토콜 레벨 통합 테스트 추가 |
+[17:58:49] | **E2E (TS)** | Vitest e2e config (현행 유지) | 채널별 end-to-end 시나리오 추가 (현재 35개 → 목표 80개) |
+[17:58:49] | **iOS/macOS** | **XCTest + Swift Testing** (신규 도입) | `GatewayConnectionController` TLS 검증, 디바이스 페어링 플로우 |
+[17:58:49] | **Android** | **JUnit5 + Espresso** (신규 도입) | 앱 레벨 UI + 게이트웨이 연결 |
+[17:58:49] | **성능/부하** | **k6 또는 Artillery** (신규 도입) | WebSocket 동시 접속, 크론 대량 실행 |
+[17:58:49] 
+[17:58:49] ### 3.2 데이터/상태 관리 전략
+[17:58:49] 
+[17:58:49] 이 프로젝트는 전통적인 DB 중심 앱이 아니라 **파일 기반 상태 + WebSocket + 외부 API** 구조이므로:
+[17:58:49] 
+[17:58:49] | 관심사 | 전략 |
+[17:58:49] |--------|------|
+[17:58:49] | **파일시스템 상태** (config, sessions, credentials) | 현행 `tmpdir` 기반 fixture 유지. `test/test-env.ts`의 격리가 잘 동작함 |
+[17:58:49] | **SQLite** (QMD memory backend) | 현행 `node:sqlite` in-memory 모드 유지. `qmd-manager.test.ts`에서 `spawn` 모킹은 적절하나, **실제 SQLite 파일 기반 통합 테스트 1-2개 추가** 권장 |
+[17:58:49] | **외부 API** (Telegram, Discord, OpenAI 등) | `src/test-utils/fetch-mock.ts` 활용 유지. Live 테스트는 `LIVE=1`로 분리된 현행 패턴 유지 |
+[17:58:49] | **WebSocket** | gateway E2E harness 확장 — 현재 contract 기반이나, **악의적 프레임/프로토콜 위반 시나리오** 추가 |
+[17:58:49] | **크론 스케줄러** | `vi.useFakeTimers()` + `src/test-utils/frozen-time.ts` 활용. timer.ts의 상태 전이 테스트를 **state-machine 기반 property test**로 보강 |
+[17:58:49] 
+[17:58:49] ### 3.3 테스트 작성 규칙/패턴
+[17:58:49] 
+[17:58:49] **즉시 적용 가능한 개선:**
+[17:58:49] 
+[17:58:49] **1) Mock fixture 표준화**
+[17:58:49] 
+[17:58:49] ```typescript
+[17:58:49] // ❌ 현재: 40개 mock이 flat하게 나열
+[17:58:49] const mockA = vi.fn();
+[17:58:49] const mockB = vi.fn();
+[17:58:49] // ...
+[17:58:49] 
+[17:58:49] // ✅ 권장: 도메인별 fixture object
+[17:58:49] function createChannelMocks() {
+[17:58:49]   return {
+[17:58:49]     enqueueSystemEvent: vi.fn(),
+[17:58:49]     buildPairingReply: vi.fn(() => "Pairing code: TESTCODE"),
+[17:58:49]     readAllowFromStore: vi.fn().mockResolvedValue([]),
+[17:58:49]     // ...
+[17:58:49]   };
+[17:58:49] }
+[17:58:49] ```
+[17:58:49] 
+[17:58:49] **2) 채널 플러그인 stub 팩토리 통합**
+[17:58:49] 
+[17:58:49] ```typescript
+[17:58:49] // ❌ 현재: audit.test.ts에 4개 채널 stub이 100줄+ 복사
+[17:58:49] // ✅ 권장: src/test-utils/channel-plugins.ts의 기존 유틸 활용
+[17:58:49] import { createStubChannelPlugin } from "../test-utils/channel-plugins.js";
+[17:58:49] const discordPlugin = createStubChannelPlugin("discord");
+[17:58:49] ```
+[17:58:49] 
+[17:58:49] **3) 테스트 파일 크기 제한**
+[17:58:49] 
+[17:58:49] - 500줄 초과 시 fixture/setup을 `__fixtures__/` 또는 같은 디렉토리의 `*.test-helpers.ts`로 분리
+[17:58:49] - `describe` 블록이 3단계 이상 중첩되면 별도 테스트 파일로 분할
+[17:58:49] 
+[17:58:49] **4) 에러 경로 필수 커버리지 규칙**
+[17:58:49] 
+[17:58:49] ```typescript
+[17:58:49] // 모든 public 함수에 대해 최소한:
+[17:58:49] describe("functionName", () => {
+[17:58:49]   it("returns expected result on valid input");      // happy path
+[17:58:49]   it("throws/returns error on invalid input");       // validation
+[17:58:49]   it("handles upstream failure gracefully");          // dependency failure
+[17:58:49] });
+[17:58:49] ```
+[17:58:49] 
+[17:58:49] **5) 보안 관련 코드 테스트 필수 체크리스트**
+[17:58:49] 
+[17:58:49] `src/gateway/`, `src/security/`, `src/infra/device-*` 변경 시:
+[17:58:49] - 인증 없는 요청 → 거부 확인
+[17:58:49] - 만료된/변조된 토큰 → 거부 확인
+[17:58:49] - Rate limit 초과 → 429/차단 확인
+[17:58:49] - 프로토콜 위반 프레임 → 안전한 연결 종료 확인
+[17:58:49] 
+[17:58:49] **6) 커버리지 측정 범위 확대**
+[17:58:49] 
+[17:58:49] `vitest.config.ts`의 coverage exclude에서 점진적으로 제거:
+[17:58:49] 
+[17:58:49] ```typescript
+[17:58:49] // Phase 1: gateway 핵심 로직 포함
+[17:58:49] // Phase 2: agents 핵심 로직 포함  
+[17:58:49] // Phase 3: channels 핵심 로직 포함
+[17:58:49] ```
+[17:58:49] 
+[17:58:49] 현재 제외 중인 디렉토리들이 프로젝트의 가장 복잡하고 위험한 코드를 포함하고 있어, "커버리지 70%"라는 수치가 실질적 안전망을 과대 표현하고 있습니다.
+[17:58:49] 
+[17:58:49] ---
+[17:58:49] 
+[17:58:49] ### 요약 우선순위
+[17:58:49] 
+[17:58:49] 1. **gateway WebSocket 핸들러** (`message-handler.ts`) 인증/권한 경로 단위 테스트 추가
+[17:58:49] 2. **cron timer** 상태 전이 + backoff/retry 경계값 테스트 추가  
+[17:58:49] 3. **커버리지 측정 범위**에서 `src/gateway/`, `src/agents/` 제외 해제
+[17:58:49] 4. iOS/macOS 앱 코드에 XCTest 도입 (TLS, 디바이스 페어링)
+[17:58:49] 5. Mock fixture 표준화 리팩토링으로 테스트 유지보수 비용 절감
+[17:58:50] ── Step 4/4: 종합 평가 시작 ──
+[18:00:41] # OpenClaw 프로젝트 종합 평가 보고서
+[18:00:41] 
+[18:00:41] ---
+[18:00:41] 
+[18:00:41] ## 1. 프로젝트 성숙도 평가
+[18:00:41] 
+[18:00:41] ### 전체 점수: **7.8 / 10**
+[18:00:41] 
+[18:00:41] | 영역 | 점수 | 근거 |
+[18:00:41] |------|------|------|
+[18:00:41] | 코드 품질 | 8.0 | 일관된 네이밍, TypeScript strict, Oxlint/Oxfmt 적용 |
+[18:00:41] | 아키텍처 | 7.5 | 플러그인 분리 우수, 내부 레이어 경계는 느슨 |
+[18:00:41] | 테스트 | 7.0 | 70% 임계값 설정, 테스트 유틸 풍부하나 네이티브 앱/게이트웨이 핵심 경로 공백 |
+[18:00:41] | 인프라/DevOps | 8.5 | 멀티 아키텍처 Docker, trusted publishing, 자동화 높음 |
+[18:00:41] | 보안 | 8.0 | 의존성 오버라이드로 CVE 대응, CODEOWNERS, GHSA 프로세스 정립 |
+[18:00:41] | 문서화 | 7.5 | CLAUDE.md 상세, Mintlify 문서 체계, i18n 파이프라인 존재 |
+[18:00:41] 
+[18:00:41] ### 강점 TOP 3
+[18:00:41] 
+[18:00:41] **1. 플러그인 아키텍처의 확장성**
+[18:00:41] `extensions/` 하위에 채널별 독립 패키지로 분리하여, 새 메시징 채널 추가 시 코어를 건드리지 않는 구조. `plugin-runtime-mock.ts` 같은 테스트 인프라까지 표준화되어 있어 서드파티 확장이 실질적으로 가능한 수준.
+[18:00:41] 
+[18:00:41] **2. 릴리스 파이프라인의 성숙도**
+[18:00:41] npm trusted publishing + GitHub environment 기반 승인 게이트, Docker 멀티 아키텍처(amd64/arm64) 빌드, 베타/stable 채널 분리, `release-check.ts` 자동 검증까지 프로덕션급 릴리스 체계 완비. 수동 백필(`workflow_dispatch`)도 안전하게 설계됨.
+[18:00:41] 
+[18:00:41] **3. 개발자 경험(DX) 인프라**
+[18:00:41] `prek` pre-commit hooks, `scripts/committer`로 스테이징 스코프 제한, 테스트 프로파일(`OPENCLAW_TEST_PROFILE=low`), Parallels 기반 크로스 OS 스모크 테스트 자동화 등 대규모 오픈소스 프로젝트의 기여 품질을 보장하는 도구가 잘 갖춰져 있음.
+[18:00:41] 
+[18:00:41] ### 개선 필요 TOP 3
+[18:00:41] 
+[18:00:41] **1. 게이트웨이 핵심 경로의 테스트 공백 (P0)**
+[18:00:41] `message-handler.ts`(700줄+)가 인증, 권한, rate limit, TLS 검증을 모두 담당하면서 커버리지 측정에서 **의도적으로 제외**되어 있음. 보안 직결 코드가 자동 검증 밖에 있는 것은 중대한 리스크.
+[18:00:41] 
+[18:00:41] **2. 레이어 경계의 부재**
+[18:00:41] `bot-handlers.ts`가 20개 이상 내부 모듈을 직접 import하는 flat한 의존 구조. 포트/어댑터 패턴 없이 컨트롤러가 저수준 store, config, routing을 직접 호출하므로, 리팩토링 시 변경 영향 범위가 넓어짐.
+[18:00:41] 
+[18:00:41] **3. 네이티브 앱(iOS/Android/macOS) 테스트 부재**
+[18:00:41] Swift/Kotlin 코드에 대한 자동화 테스트가 확인되지 않음. `GatewayConnectionController`, TLS fingerprint 검증, 디바이스 페어링 등 보안 민감 로직이 네이티브 레이어에 존재하나 무검증 상태.
+[18:00:41] 
+[18:00:41] ---
+[18:00:41] 
+[18:00:41] ## 2. 인프라 & DevOps 평가
+[18:00:41] 
+[18:00:41] ### CI/CD 파이프라인
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] PR 생성
+[18:00:41]  ├─ labeler.yml        ← 자동 라벨링 (사이즈, 채널, maintainer 판별)
+[18:00:41]  ├─ workflow-sanity.yml ← actionlint, 탭 금지, composite input 검증
+[18:00:41]  ├─ codeql.yml         ← JS/TS, Python, Java, Swift, Actions 정적 분석
+[18:00:41]  ├─ sandbox-common-smoke.yml ← 샌드박스 이미지 빌드 검증
+[18:00:41]  └─ (prek hooks)       ← 로컬 pre-commit (lint, format, type-check)
+[18:00:41] 
+[18:00:41] 태그 푸시 (v*)
+[18:00:41]  ├─ openclaw-npm-release.yml
+[18:00:41]  │   ├─ preview (push) ← 드라이런 + 메타데이터 검증
+[18:00:41]  │   └─ publish (dispatch) ← npm trusted publishing + provenance
+[18:00:41]  └─ docker-release.yml
+[18:00:41]      ├─ build-amd64    ← default + slim 이미지
+[18:00:41]      ├─ build-arm64    ← default + slim 이미지
+[18:00:41]      └─ merge-manifests ← 멀티아치 매니페스트 생성 + latest 태깅
+[18:00:41] 
+[18:00:41] 스케줄
+[18:00:41]  ├─ stale.yml (매일 03:17 UTC) ← 이슈/PR 자동 stale + 48h 후 lock
+[18:00:41]  └─ auto-response.yml ← 라벨 기반 자동 응답/닫기
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] **평가:** 파이프라인 구성이 체계적이며, concurrency 그룹 설정으로 중복 실행 방지, GitHub App 토큰 이중화(primary + fallback) 등 운영 안정성을 고려한 설계. Blacksmith runner 사용으로 빌드 속도 최적화.
+[18:00:41] 
+[18:00:41] **주의점:** CodeQL이 `workflow_dispatch` 전용으로 설정되어 있어, PR마다 자동 실행되지 않음. 보안 분석이 수동 트리거에 의존하는 구조.
+[18:00:41] 
+[18:00:41] ### 컨테이너화 수준: **상급**
+[18:00:41] 
+[18:00:41] | 항목 | 상태 |
+[18:00:41] |------|------|
+[18:00:41] | 멀티스테이지 빌드 | 4단계 (ext-deps → build → runtime-assets → runtime) |
+[18:00:41] | 이미지 변형 | default (bookworm) + slim (bookworm-slim) |
+[18:00:41] | 아키텍처 | amd64 + arm64 네이티브 빌드 |
+[18:00:41] | 이미지 고정 | SHA256 digest 핀닝 (재현 가능한 빌드) |
+[18:00:41] | 옵션 기능 | `OPENCLAW_INSTALL_BROWSER`, `OPENCLAW_INSTALL_DOCKER_CLI`, `OPENCLAW_DOCKER_APT_PACKAGES` — 빌드 시 선택적 설치 |
+[18:00:41] | 캐시 전략 | pnpm store, apt cache에 BuildKit 마운트 캐시 적용 |
+[18:00:41] | 보안 | non-root `node` 유저 실행, `cap_drop`, `no-new-privileges` |
+[18:00:41] | 헬스체크 | HTTP `/healthz` 기반 30초 간격 |
+[18:00:41] 
+[18:00:41] ### 배포 전략
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] stable:  npm dist-tag "latest" + GHCR "latest" 태그
+[18:00:41] beta:    npm dist-tag "beta" + GHCR 버전 태그만
+[18:00:41] dev:     main 브랜치 → GHCR "main" 태그 (자동)
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] Docker Compose로 gateway + CLI 분리 실행을 지원하며, 샌드박스 격리(Docker-in-Docker CLI)도 옵션으로 제공. Fly.io 배포 경로도 존재(`flawd-bot`).
+[18:00:41] 
+[18:00:41] ---
+[18:00:41] 
+[18:00:41] ## 3. Auto-Pipe 활용 가이드
+[18:00:41] 
+[18:00:41] ### a) 반드시 따라야 할 패턴
+[18:00:41] 
+[18:00:41] | # | 규칙 | 근거 |
+[18:00:41] |---|------|------|
+[18:00:41] | 1 | **ESM + strict TypeScript** — `any` 금지, `@ts-nocheck` 금지. `Type.Union` 대신 `stringEnum`/`optionalStringEnum` 사용 | `CLAUDE.md` 명시 + Oxlint 강제 |
+[18:00:41] | 2 | **동일 모듈에 static + dynamic import 혼용 금지** — lazy loading이 필요하면 `*.runtime.ts` 경계 파일 생성 후 그 파일만 dynamic import | 빌드 시 `[INEFFECTIVE_DYNAMIC_IMPORT]` 경고 발생 |
+[18:00:41] | 3 | **프로토타입 뮤테이션 금지** — `applyPrototypeMixins`, `Object.defineProperty(prototype, ...)` 대신 명시적 상속/컴포지션 사용 | 타입 안전성 보장 정책 |
+[18:00:41] | 4 | **CLI progress는 `src/cli/progress.ts`(`osc-progress` + `@clack/prompts` spinner) 사용** — 직접 스피너/프로그레스바 구현 금지 | 터미널 출력 일관성 |
+[18:00:41] | 5 | **터미널 색상은 `src/terminal/palette.ts` 공유 팔레트 사용** — 하드코딩 금지 | Lobster seam 정책 |
+[18:00:41] | 6 | **`format` 프로퍼티명을 tool 스키마에 사용하지 않기** — 일부 validator가 예약어로 취급 | 런타임 스키마 검증 실패 방지 |
+[18:00:41] | 7 | **플러그인 전용 의존성은 해당 extension의 `package.json`에만 추가** — 루트 `package.json`에 넣지 않음 | 플러그인 격리 원칙 |
+[18:00:41] 
+[18:00:41] ### b) 파일 생성 위치 규칙
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] 새 기능 (코어)
+[18:00:41]   src/<도메인>/
+[18:00:41]     ├─ <feature>.ts           ← 메인 로직
+[18:00:41]     ├─ <feature>.test.ts      ← 단위 테스트 (colocated)
+[18:00:41]     ├─ <feature>.e2e.test.ts  ← E2E 테스트
+[18:00:41]     └─ types.ts               ← 도메인 타입 (필요 시)
+[18:00:41] 
+[18:00:41] 새 채널/확장
+[18:00:41]   extensions/<channel-name>/
+[18:00:41]     ├─ package.json           ← 독립 패키지 (workspace:* 금지)
+[18:00:41]     ├─ src/
+[18:00:41]     │   ├─ channel.ts         ← 채널 구현
+[18:00:41]     │   ├─ index.ts           ← 플러그인 엔트리
+[18:00:41]     │   └─ *.test.ts
+[18:00:41]     └─ tsconfig.json
+[18:00:41] 
+[18:00:41] 새 CLI 커맨드
+[18:00:41]   src/commands/<command-name>.ts
+[18:00:41]   src/commands/<command-name>.test.ts
+[18:00:41] 
+[18:00:41] 새 게이트웨이 엔드포인트
+[18:00:41]   src/gateway/server/<endpoint>/
+[18:00:41]     ├─ handler.ts
+[18:00:41]     └─ handler.test.ts
+[18:00:41] 
+[18:00:41] 새 에이전트 도구
+[18:00:41]   src/agents/tools/<tool-name>.ts
+[18:00:41]   src/agents/tools/<tool-name>.test.ts
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ### c) 네이밍 규칙 요약
+[18:00:41] 
+[18:00:41] | 대상 | 규칙 | 예시 |
+[18:00:41] |------|------|------|
+[18:00:41] | 파일명 | kebab-case | `session-tool-result-guard.ts` |
+[18:00:41] | 함수 | camelCase, 동사 접두사 (`resolve`, `build`, `compute`, `normalize`) | `resolveInboundMediaFileId()` |
+[18:00:41] | Boolean 함수 | `is`/`has`/`should` 접두사 | `isMediaSizeLimitError()` |
+[18:00:41] | 상수 | UPPER_SNAKE_CASE | `MAX_PREAUTH_PAYLOAD_BYTES` |
+[18:00:41] | 타입/인터페이스 | PascalCase | `GatewayWsClient` |
+[18:00:41] | 제품명 | `OpenClaw` (UI/docs), `openclaw` (CLI/패키지/경로) | — |
+[18:00:41] | 영어 철자 | American English | `color`, `behavior`, `analyze` |
+[18:00:41] 
+[18:00:41] ### d) Import/의존성 주입 규칙
+[18:00:41] 
+[18:00:41] ```typescript
+[18:00:41] // 패턴 1: State 객체 주입 (서비스 레이어)
+[18:00:41] interface MyServiceState {
+[18:00:41]   deps: {
+[18:00:41]     log: Logger;
+[18:00:41]     config: Config;
+[18:00:41]   };
+[18:00:41] }
+[18:00:41] export async function doWork(state: MyServiceState, input: Input) { ... }
+[18:00:41] 
+[18:00:41] // 패턴 2: 매개변수 객체 주입 (핸들러/컨트롤러)
+[18:00:41] interface HandleMessageParams {
+[18:00:41]   session: Session;
+[18:00:41]   config: Config;
+[18:00:41]   send: (msg: string) => Promise<void>;
+[18:00:41] }
+[18:00:41] export async function handleMessage(params: HandleMessageParams) { ... }
+[18:00:41] 
+[18:00:41] // 패턴 3: createDefaultDeps (CLI 진입점)
+[18:00:41] export function createDefaultDeps(): Deps {
+[18:00:41]   return { log: createLogger(), config: loadConfig() };
+[18:00:41] }
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] - `workspace:*`를 `dependencies`에 사용하지 않음 (npm install 깨짐)
+[18:00:41] - `openclaw`는 플러그인의 `devDependencies` 또는 `peerDependencies`에만 배치
+[18:00:41] - patchedDependencies가 적용된 패키지는 반드시 exact version 사용 (`^`/`~` 금지)
+[18:00:41] 
+[18:00:41] ### e) 에러 처리 규칙
+[18:00:41] 
+[18:00:41] ```typescript
+[18:00:41] // 내부 코드는 신뢰 — 과도한 방어적 검증 금지
+[18:00:41] // 시스템 경계(사용자 입력, 외부 API)에서만 검증
+[18:00:41] 
+[18:00:41] // Good: 외부 경계 검증
+[18:00:41] function handleWebhook(req: Request) {
+[18:00:41]   const payload = parseAndValidate(req.body); // zod/typebox로 검증
+[18:00:41]   return processPayload(payload);             // 내부는 신뢰
+[18:00:41] }
+[18:00:41] 
+[18:00:41] // Bad: 내부 호출에 불필요한 null 체크
+[18:00:41] function processPayload(payload: ValidatedPayload) {
+[18:00:41]   if (!payload) throw new Error("impossible"); // 불필요
+[18:00:41] }
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] - OWASP Top 10 취약점(XSS, SQL injection, command injection 등) 주의
+[18:00:41] - `withFileLock` 패턴으로 파일 기반 동시성 제어
+[18:00:41] - 가상의 미래 시나리오를 위한 에러 핸들링/폴백 추가 금지
+[18:00:41] 
+[18:00:41] ### f) 테스트 작성 규칙
+[18:00:41] 
+[18:00:41] ```typescript
+[18:00:41] // 프레임워크: Vitest + V8 coverage
+[18:00:41] // 실행: pnpm test -- src/my-feature.test.ts -t "test name"
+[18:00:41] 
+[18:00:41] // 구조
+[18:00:41] import { describe, it, expect, vi, beforeEach } from "vitest";
+[18:00:41] 
+[18:00:41] describe("MyFeature", () => {
+[18:00:41]   // setup/teardown
+[18:00:41]   beforeEach(() => { vi.clearAllMocks(); });
+[18:00:41] 
+[18:00:41]   it("행위 중심으로 기술한다", async () => {
+[18:00:41]     // Arrange
+[18:00:41]     const deps = createTestDeps();  // src/test-utils/ 활용
+[18:00:41] 
+[18:00:41]     // Act
+[18:00:41]     const result = await doWork(deps, input);
+[18:00:41] 
+[18:00:41]     // Assert
+[18:00:41]     expect(result).toMatchObject({ ... });
+[18:00:41]   });
+[18:00:41] });
+[18:00:41] 
+[18:00:41] // 모킹: vi.mock() 모듈 단위
+[18:00:41] // 플러그인 테스트: extensions/test-utils/plugin-runtime-mock.ts 활용
+[18:00:41] // 시간: src/test-utils/frozen-time.ts
+[18:00:41] // 환경변수: src/test-utils/env.ts
+[18:00:41] // Workers: 16 초과 금지
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] - 테스트 파일은 소스와 동일 디렉토리에 colocate
+[18:00:41] - 순수 테스트 추가/수정은 changelog 불필요
+[18:00:41] - live 테스트는 `*.live.test.ts`로 분리, `LIVE=1`로 실행
+[18:00:41] 
+[18:00:41] ---
+[18:00:41] 
+[18:00:41] ## 4. 추천 개발 순서
+[18:00:41] 
+[18:00:41] 새 기능(예: 새 메시징 채널 `X` 추가)을 개발한다고 가정할 때:
+[18:00:41] 
+[18:00:41] ### Phase 1: 탐색 & 설계
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] 1. 기존 유사 채널 코드 분석 (extensions/msteams 또는 extensions/matrix 참고)
+[18:00:41] 2. .devflow/features/<feature-name>/requirements.md 작성
+[18:00:41] 3. 아키텍처 결정 (코어 vs 확장 vs 서드파티)
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ### Phase 2: 스캐폴딩
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] 생성 파일:
+[18:00:41]   extensions/<channel>/
+[18:00:41]     ├─ package.json          ← name: @openclaw/<channel>
+[18:00:41]     ├─ tsconfig.json         ← extends 루트
+[18:00:41]     └─ src/
+[18:00:41]         ├─ index.ts          ← 플러그인 엔트리 (registerPlugin)
+[18:00:41]         ├─ channel.ts        ← 채널 구현 (sendMessage, onInbound 등)
+[18:00:41]         └─ types.ts          ← 채널 전용 타입
+[18:00:41] 
+[18:00:41] 수정 파일:
+[18:00:41]   pnpm-workspace.yaml       ← extensions/<channel> 추가
+[18:00:41]   .github/labeler.yml       ← 채널 라벨 규칙 추가
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ### Phase 3: 핵심 로직 구현
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] 생성 파일:
+[18:00:41]   extensions/<channel>/src/
+[18:00:41]     ├─ bot-handlers.ts       ← 인바운드 메시지 핸들러
+[18:00:41]     ├─ auth.ts               ← 인증/온보딩 로직
+[18:00:41]     └─ media.ts              ← 미디어 처리 (필요 시)
+[18:00:41] 
+[18:00:41] 수정 파일:
+[18:00:41]   src/channels/              ← 채널 레지스트리에 등록 (필요 시)
+[18:00:41]   docs/channels/<channel>.md ← 사용자 문서
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ### Phase 4: 테스트
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] 생성 파일:
+[18:00:41]   extensions/<channel>/src/
+[18:00:41]     ├─ channel.test.ts       ← 단위 테스트
+[18:00:41]     ├─ bot-handlers.test.ts  ← 핸들러 테스트
+[18:00:41]     └─ auth.test.ts          ← 인증 테스트
+[18:00:41] 
+[18:00:41] 실행:
+[18:00:41]   pnpm test -- extensions/<channel>/
+[18:00:41]   pnpm build                 ← 빌드 검증
+[18:00:41]   pnpm check                 ← lint/format 검증
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ### Phase 5: 통합 & 문서
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] 수정 파일:
+[18:00:41]   docs/channels/<channel>.md      ← 설정 가이드
+[18:00:41]   docs/zh-CN/channels/<channel>.md ← i18n (scripts/docs-i18n)
+[18:00:41]   CHANGELOG.md                    ← 해당 버전 섹션에 추가
+[18:00:41] 
+[18:00:41] 검증:
+[18:00:41]   pnpm tsgo                  ← 타입 체크
+[18:00:41]   pnpm build                 ← 최종 빌드
+[18:00:41]   pnpm test                  ← 전체 테스트
+[18:00:41]   pnpm release:check         ← 릴리스 메타 검증 (태깅 전)
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ### Phase 6: PR 제출
+[18:00:41] 
+[18:00:41] ```
+[18:00:41] scripts/committer "feat(<channel>): add <channel> messaging channel" <파일들...>
+[18:00:41] gh pr create --title "feat(<channel>): add <channel> channel" --body ...
+[18:00:41] ```
+[18:00:41] 
+[18:00:41] ---
+[18:00:41] 
+[18:00:41] ### 최종 요약
+[18:00:41] 
+[18:00:41] OpenClaw은 **프로덕션 수준의 릴리스 인프라**와 **확장 가능한 플러그인 아키텍처**를 갖춘 성숙한 프로젝트입니다. 주요 리스크는 게이트웨이 인증 경로의 테스트 공백과 네이티브 앱 코드의 자동 검증 부재이며, 이 두 영역을 우선 보강하면 전체 신뢰성이 크게 향상될 것입니다. 코드 생성 시에는 기존 플러그인 구조를 100% 따르고, 의존성 격리 원칙을 준수하는 것이 핵심입니다.
+============================================================
+Finished: 2026-03-18T18:00:42.092933 [SUCCESS]
