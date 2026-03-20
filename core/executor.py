@@ -17,6 +17,7 @@
 """
 
 import os
+import signal
 import subprocess
 import logging
 from abc import ABC, abstractmethod
@@ -248,35 +249,44 @@ class ToolExecutor(BaseExecutor):
 
         start = datetime.now()
         try:
-            result = subprocess.run(
+            # 프로세스 그룹으로 실행 — 타임아웃 시 자식 프로세스까지 확실히 종료
+            process = subprocess.Popen(
                 command,
                 shell=True,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 cwd=cwd,
-                timeout=timeout,
+                preexec_fn=os.setsid,
             )
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                # 프로세스 그룹 전체를 SIGKILL (Gradle 데몬 등 자식까지)
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                process.wait()
+                duration = (datetime.now() - start).total_seconds()
+                logger.warning(f"[Tool] cmd='{command[:50]}' 타임아웃 ({timeout}초)")
+                return ExecutorResult(
+                    success=False, output="", executor_type="tool",
+                    duration_sec=duration, error=f"타임아웃 ({timeout}초 초과)",
+                )
+
             duration = (datetime.now() - start).total_seconds()
 
-            success = result.returncode == 0
-            output = result.stdout
-            if result.stderr:
-                output += f"\n--- stderr ---\n{result.stderr}"
+            success = process.returncode == 0
+            output = stdout
+            if stderr:
+                output += f"\n--- stderr ---\n{stderr}"
 
-            logger.info(f"[Tool] cmd='{command[:50]}' exit={result.returncode} duration={duration:.1f}s")
+            logger.info(f"[Tool] cmd='{command[:50]}' exit={process.returncode} duration={duration:.1f}s")
 
             return ExecutorResult(
                 success=success,
                 output=output,
                 executor_type="tool",
                 duration_sec=duration,
-                error="" if success else f"exit code {result.returncode}",
-            )
-        except subprocess.TimeoutExpired:
-            duration = (datetime.now() - start).total_seconds()
-            return ExecutorResult(
-                success=False, output="", executor_type="tool",
-                duration_sec=duration, error=f"타임아웃 ({timeout}초 초과)",
+                error="" if success else f"exit code {process.returncode}",
             )
         except Exception as e:
             duration = (datetime.now() - start).total_seconds()

@@ -280,7 +280,7 @@ projects/{name}/
 
 ## 7. Web UI Integration
 
-Bootstrap page (`web/pages/bootstrap.py`) phases:
+Bootstrap pages (`frontend/src/app/bootstrap/`) and API (`web/routes/bootstrap_api.py`) phases:
 
 ```
 input -> analyzing -> review -> generating -> done

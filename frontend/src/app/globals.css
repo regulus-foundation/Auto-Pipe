@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+
+/* ─── Design Tokens ─── */
+:root {
+  /* Background layers (elevation through lightness) */
+  --bg-base:      #0A0A0C;
+  --bg-surface:   #111114;
+  --bg-raised:    #1A1A1F;
+  --bg-overlay:   #222228;
+
+  /* Borders (opacity-based) */
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-strong:  rgba(255, 255, 255, 0.16);
+
+  /* Text (3 levels only) */
+  --text-primary:   #EDEDEF;
+  --text-secondary: #8E8E93;
+  --text-tertiary:  #5A5A5E;
+
+  /* Status */
+  --status-running: #3B82F6;
+  --status-success: #22C55E;
+  --status-error:   #EF4444;
+  --status-warning: #F59E0B;
+  --status-pending: #71717A;
+
+  /* Accent */
+  --accent-primary: #3B82F6;
+  --accent-purple:  #A855F7;
+  --accent-cyan:    #06B6D4;
+
+  /* Radius */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Prose (Markdown) ─── */
+.prose { color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+.prose h1 { font-size: 1.375rem; font-weight: 600; margin: 1.5rem 0 0.75rem; color: var(--text-primary); letter-spacing: -0.02em; border-bottom: 1px solid var(--border-default); padding-bottom: 0.5rem; }
+.prose h2 { font-size: 1.2rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: var(--text-primary); letter-spacing: -0.02em; }
+.prose h3 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 0.375rem; color: var(--text-primary); }
+.prose h4 { font-size: 0.95rem; font-weight: 600; margin: 0.75rem 0 0.25rem; color: var(--text-primary); }
+.prose p { margin: 0.5rem 0; }
+.prose ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+.prose ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+.prose li { margin: 0.2rem 0; }
+.prose strong { font-weight: 600; color: var(--text-primary); }
+.prose code {
+  background: var(--bg-raised);
+  color: #F472B6;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+}
+.prose pre {
+  background: #0A0A0C;
+  color: #D4D4D8;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-size: 12px;
+  line-height: 1.7;
+  font-family: var(--font-mono);
+}
+.prose pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+.prose a { color: var(--accent-primary); text-decoration: underline; text-underline-offset: 2px; }
+.prose a:hover { color: #60A5FA; }
+.prose blockquote { border-left: 3px solid var(--border-default); padding-left: 1rem; color: var(--text-tertiary); margin: 0.75rem 0; }
+.prose hr { border: none; border-top: 1px solid var(--border-default); margin: 1.5rem 0; }
+.prose table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 13px; }
+.prose thead { background: var(--bg-surface); }
+.prose th { border: 1px solid var(--border-default); padding: 8px 12px; text-align: left; font-weight: 600; color: var(--text-primary); }
+.prose td { border: 1px solid var(--border-default); padding: 8px 12px; color: var(--text-secondary); }
+.prose tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+
+/* ─── Log viewer scrollbar ─── */
+.log-container::-webkit-scrollbar { width: 6px; }
+.log-container::-webkit-scrollbar-track { background: transparent; }
+.log-container::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 3px; }
+
+/* ─── Focus ring ─── */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px rgba(59, 130, 246, 0.3);
+}
+
+/* ─── Animations ─── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.animate-spin { animation: spin 1s linear infinite; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-raised) 50%, var(--bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 200ms ease-out; }

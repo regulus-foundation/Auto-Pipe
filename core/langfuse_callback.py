@@ -12,6 +12,11 @@ Langfuse가 설정되어 있으면 콜백 핸들러를 반환하고,
 """
 
 import os
+import logging
+
+# Langfuse/OpenTelemetry context 전파 시 발생하는 무해한 에러 억제
+logging.getLogger("langfuse").setLevel(logging.ERROR)
+logging.getLogger("opentelemetry").setLevel(logging.ERROR)
 
 _handler = None
 _initialized = False

@@ -29,38 +29,77 @@ if [ -z "$OPENAI_API_KEY" ]; then
     exit 1
 fi
 
-# Langfuse (Docker Compose) 시작
-if command -v docker &> /dev/null && docker info &> /dev/null 2>&1; then
+# Docker 필수
+if ! command -v docker &> /dev/null || ! docker info &> /dev/null 2>&1; then
     echo ""
-    echo "🔍 Langfuse 시작 중..."
-    docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d --quiet-pull 2>/dev/null
-
-    if [ $? -eq 0 ]; then
-        echo "   Langfuse UI: http://localhost:3000"
-
-        # Langfuse 키가 없으면 안내
-        if [ -z "$LANGFUSE_SECRET_KEY" ] || [ -z "$LANGFUSE_PUBLIC_KEY" ]; then
-            echo ""
-            echo "📋 Langfuse 연동 방법:"
-            echo "   1. http://localhost:3000 에서 계정 생성"
-            echo "   2. Settings → API Keys 에서 키 발급"
-            echo "   3. 환경변수 설정:"
-            echo "      export LANGFUSE_SECRET_KEY=sk-lf-..."
-            echo "      export LANGFUSE_PUBLIC_KEY=pk-lf-..."
-            echo "      export LANGFUSE_HOST=http://localhost:3000"
-            echo ""
-        fi
-    else
-        echo "   ⚠️  Langfuse 시작 실패 (Docker 문제). Streamlit만 실행합니다."
-    fi
-else
+    echo "❌ Docker가 실행되고 있지 않습니다."
+    echo "   Docker Desktop을 시작한 후 다시 실행하세요."
     echo ""
-    echo "ℹ️  Docker가 없어 Langfuse를 건너뜁니다. Streamlit만 실행합니다."
+    exit 1
 fi
 
 echo ""
-echo "🚀 LangGraph 학습 UI 시작"
-echo "   http://localhost:8502"
+echo "🐳 Docker 서비스 시작 중 (PostgreSQL + Langfuse)..."
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d --quiet-pull 2>/dev/null
+
+if [ $? -ne 0 ]; then
+    echo "   ❌ Docker Compose 시작 실패."
+    exit 1
+fi
+
+echo "   ⏳ PostgreSQL 준비 대기 중..."
+RETRIES=0
+MAX_RETRIES=30
+until docker compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T langfuse-postgres pg_isready -U langfuse -q 2>/dev/null; do
+    RETRIES=$((RETRIES + 1))
+    if [ $RETRIES -ge $MAX_RETRIES ]; then
+        echo "   ❌ PostgreSQL 시작 타임아웃."
+        exit 1
+    fi
+    sleep 1
+done
+
+echo "   ✅ PostgreSQL 준비 완료"
+export AUTOPIPE_DATABASE_URL="${AUTOPIPE_DATABASE_URL:-postgresql://langfuse:langfuse@localhost:5432/autopipe}"
+echo "   Langfuse UI: http://localhost:3000"
+
+if [ -z "$LANGFUSE_SECRET_KEY" ] || [ -z "$LANGFUSE_PUBLIC_KEY" ]; then
+    echo ""
+    echo "   📋 Langfuse 연동: http://localhost:3000 → API Keys 발급 → .env에 추가"
+fi
+
+# Frontend 의존성 확인
+if [ ! -d "$SCRIPT_DIR/frontend/node_modules" ]; then
+    echo ""
+    echo "📦 Frontend 의존성 설치 중..."
+    (cd "$SCRIPT_DIR/frontend" && npm install)
+fi
+
+echo ""
+echo "🚀 Auto-Pipe 시작"
+echo "   Backend API: http://localhost:8502"
+echo "   Frontend UI: http://localhost:3100"
 echo ""
 
-streamlit run web/app.py --server.port 8502 --server.headless true
+# 로그 디렉토리
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+BACKEND_LOG="$LOG_DIR/backend.log"
+FRONTEND_LOG="$LOG_DIR/frontend.log"
+
+# 이전 로그 초기화
+> "$BACKEND_LOG"
+> "$FRONTEND_LOG"
+
+# Backend + Frontend 동시 실행 (tee로 터미널 + 파일 동시 출력)
+uvicorn web.app:app --host 0.0.0.0 --port 8502 --reload 2>&1 | tee -a "$BACKEND_LOG" &
+BACKEND_PID=$!
+
+(cd "$SCRIPT_DIR/frontend" && npx next dev --port 3100) 2>&1 | tee -a "$FRONTEND_LOG" &
+FRONTEND_PID=$!
+
+echo "   Logs: $LOG_DIR/"
+
+# 종료 시 둘 다 종료
+trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" SIGINT SIGTERM
+wait

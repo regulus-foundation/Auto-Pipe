@@ -11,7 +11,7 @@ Inspired by OpenClaw's multi-channel gateway pattern. Layer 3 design.
 
 ```
 Current:
-  Web UI (Streamlit) is the only control tower
+  Web UI (FastAPI + Next.js) is the only control tower
   -> Must always open browser
   -> Cannot trigger/approve pipeline from outside
   -> No voice commands
@@ -87,7 +87,7 @@ class ChannelMessage:
 | **Telegram** | `python-telegram-bot` | Yes (native) | **1st** |
 | Slack | `slack-bolt` | No | 2nd |
 | Discord | `discord.py` | No | 3rd |
-| Web UI | Existing Streamlit | No | Already done |
+| Web UI | Existing FastAPI + Next.js | No | Already done |
 
 ### 3.2 Voice Pipeline
 

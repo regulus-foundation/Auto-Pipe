@@ -97,8 +97,8 @@ All project types share the same pipeline flow. Bootstrap auto-detects the type 
 |  console: Claude Code CLI (bulk code generation, design)           |
 |  tool: subprocess (build, test, local commands)                    |
 |                                                                    |
-|  [ Web UI: Streamlit ]                                             |
-|  Control tower for all flows (input/monitoring/decisions/logs)     |
+|  [ Web UI: FastAPI + Next.js ]                                     |
+|  Backend API (JSON + SSE) + React frontend with dark theme         |
 +-------------------------------------------------------------------+
 ```
 
@@ -122,9 +122,10 @@ The key insight: **code generation is the most expensive LLM task**. By using Cl
 ### Prerequisites
 
 - Python 3.12+
+- Node.js 20+
+- Docker (required -- PostgreSQL for LangGraph checkpointer + Langfuse for observability)
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) (recommended, for console executor)
 - OpenAI API key (for api executor)
-- Docker (optional, for Langfuse observability)
 
 ### Installation
 
@@ -136,8 +137,11 @@ cd auto-pipe
 python3.12 -m venv venv
 source venv/bin/activate
 
-# Install dependencies
+# Install backend dependencies
 pip install -r requirements.txt
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
 
 # Configure environment
 cp .env.example .env
@@ -148,11 +152,14 @@ cp .env.example .env
 
 ```bash
 ./run.sh
-# or
-source venv/bin/activate
-streamlit run web/app.py --server.port 8502 --server.headless true
+# Starts: Docker (PostgreSQL + Langfuse), Backend API (port 8502), Frontend UI (port 3100)
 
-# Open http://localhost:8502
+# Or run separately:
+source venv/bin/activate
+uvicorn web.app:app --host 0.0.0.0 --port 8502 --reload    # Backend API
+cd frontend && npx next dev --port 3100                      # Frontend UI
+
+# Open http://localhost:3100
 ```
 
 ### Usage
@@ -165,12 +172,16 @@ streamlit run web/app.py --server.port 8502 --server.headless true
 
 2. **Pipeline** (per requirement)
    - Go to Pipeline page
-   - Select project
-   - Enter requirements
+   - Select project, enter requirements
+   - Multiple requirements can be queued — they execute sequentially per project
    - Review and approve design
    - Monitor build/test progress
    - Review and approve code review
    - Done!
+
+3. **History**
+   - View all active/completed runs
+   - Browse project execution logs
 
 ---
 
@@ -200,12 +211,17 @@ auto-pipe/
 |       +-- review.py         # Phase 4: Quality + security review (api)
 |       +-- docs.py           # Phase 5: Documentation (api)
 |
-+-- web/                      # Streamlit Web UI
-|   +-- app.py                # Main entry
-|   +-- pages/
-|       +-- bootstrap.py      # Bootstrap page
-|       +-- pipeline.py       # Pipeline execution page
-|       +-- examples.py       # LangGraph learning examples
++-- web/                      # FastAPI Backend (JSON API + SSE)
+|   +-- app.py                # FastAPI entry point + CORS
+|   +-- run_manager.py        # Per-run state + async log queue
+|   +-- routes/
+|       +-- bootstrap_api.py  # Bootstrap REST API + SSE
+|       +-- pipeline_api.py   # Pipeline REST API + SSE
+|
++-- frontend/                 # Next.js Frontend (React + Tailwind)
+|   +-- src/app/              # App Router pages (bootstrap, pipeline, history)
+|   +-- src/components/       # UI components (LogViewer, Tabs, Toast, Skeleton, CommandPalette...)
+|   +-- src/lib/              # API helpers, SSE hook with auto-reconnect
 |
 +-- projects/                 # Per-project output (gitignored)
 |   +-- {name}/
@@ -213,9 +229,21 @@ auto-pipe/
 |       +-- prompts/*.md      # Project-specific prompts
 |       +-- analysis/*.md     # Deep analysis documents
 |       +-- log/*.log         # Execution logs
-|
-+-- examples/                 # 9 LangGraph learning patterns
 ```
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Pipeline Engine | LangGraph | State-based graph with branching, cycles, parallel, Human-in-the-Loop |
+| Backend API | FastAPI | JSON REST API + SSE for real-time log streaming |
+| Frontend UI | Next.js + React + Tailwind CSS | Dark-themed dashboard with component-based architecture |
+| LLM | OpenAI API (gpt-4o-mini default) | Lightweight analysis, review, documentation |
+| Code Generation | Claude Code CLI | Subscription-based bulk code generation |
+| State Persistence | PostgreSQL (LangGraph checkpointer) | Human-in-the-Loop state persistence |
+| Observability | Langfuse | LLM call tracing and monitoring |
 
 ---
 
@@ -265,13 +293,12 @@ See [TODO_LIST.md](TODO_LIST.md) for current status and priorities.
 - Monitor/History web pages
 
 **Mid-term:**
-- SqliteSaver for persistent state
 - Telegram bot integration (voice + text commands)
+- Git integration (auto PR creation)
 
 **Long-term:**
-- Git integration (auto PR creation)
 - RAG for internal code/wiki reference
-- Multi-user support (PostgresSaver)
+- Multi-user support
 
 ---
 

@@ -18,6 +18,30 @@ def _extract_error_lines(output: str) -> list[str]:
     return errors
 
 
+def _build_only_command(build_cmd: str, test_cmd: str) -> str:
+    """빌드 커맨드에서 테스트를 제외한 커맨드 반환.
+
+    파이프라인이 빌드/테스트를 분리 실행하므로,
+    빌드 커맨드가 테스트를 포함하는 경우 자동으로 제외한다.
+    """
+    if not test_cmd:
+        return build_cmd
+
+    # Gradle: ./gradlew build → ./gradlew build -x test
+    if "gradlew" in build_cmd and "-x test" not in build_cmd:
+        if "build" in build_cmd or "assemble" not in build_cmd:
+            return f"{build_cmd} -x test"
+
+    # Maven: mvn package/install/verify → mvn ... -DskipTests
+    if ("mvn " in build_cmd or "mvnw " in build_cmd) and "-DskipTests" not in build_cmd:
+        return f"{build_cmd} -DskipTests"
+
+    # npm/yarn: build는 보통 테스트 미포함이므로 그대로
+    # Go/Rust/Python: build와 test가 별도 커맨드이므로 그대로
+
+    return build_cmd
+
+
 def pre_build_check_node(state: AutoPipeState) -> dict:
     """사전 빌드+테스트 체크 — 파이프라인 시작 전 기존 상태 확인"""
     config = PipelineConfig(state["config_path"])
@@ -34,11 +58,17 @@ def pre_build_check_node(state: AutoPipeState) -> dict:
 
     # ── 빌드 체크 ──
     build_cfg = config.nodes.get("build", {})
+    test_cfg = config.nodes.get("run_tests", {})
     build_cmd = build_cfg.get("command", "") or config.build_command
+    test_cmd = test_cfg.get("command", "") or config.test_command
+
+    # 빌드/테스트 분리 실행이므로 빌드에서 테스트 제외
+    build_cmd = _build_only_command(build_cmd, test_cmd)
+    build_timeout = build_cfg.get("timeout", 300)
 
     if build_cmd:
-        _emit_log(f"사전 빌드 체크: {build_cmd}")
-        result = executor.run(build_cmd, cwd=project_path)
+        _emit_log(f"사전 빌드 체크: {build_cmd} (타임아웃: {build_timeout}초)")
+        result = executor.run(build_cmd, cwd=project_path, timeout=build_timeout)
 
         if result.success:
             _emit_log("사전 빌드 체크: 통과 ✓")
@@ -56,12 +86,11 @@ def pre_build_check_node(state: AutoPipeState) -> dict:
         updates["messages"].append("사전 빌드 체크 스킵 (커맨드 없음)")
 
     # ── 테스트 체크 (빌드 성공 시에만) ──
-    test_cfg = config.nodes.get("run_tests", {})
-    test_cmd = test_cfg.get("command", "") or config.test_command
+    test_timeout = test_cfg.get("timeout", 300)
 
     if test_cmd and updates["pre_build_result"] == "success":
-        _emit_log(f"사전 테스트 체크: {test_cmd}")
-        result = executor.run(test_cmd, cwd=project_path)
+        _emit_log(f"사전 테스트 체크: {test_cmd} (타임아웃: {test_timeout}초)")
+        result = executor.run(test_cmd, cwd=project_path, timeout=test_timeout)
 
         if result.success:
             _emit_log("사전 테스트 체크: 통과 ✓")
@@ -89,7 +118,12 @@ def build_node(state: AutoPipeState) -> dict:
 
     # 노드 설정에서 command 가져오기, 없으면 프로젝트 빌드 커맨드
     node_cfg = config.nodes.get("build", {})
+    test_cfg = config.nodes.get("run_tests", {})
     command = node_cfg.get("command", "") or config.build_command
+    test_cmd = test_cfg.get("command", "") or config.test_command
+
+    # 빌드/테스트 분리 실행이므로 빌드에서 테스트 제외
+    command = _build_only_command(command, test_cmd)
     if not command:
         return {
             "build_result": "success",
@@ -99,9 +133,10 @@ def build_node(state: AutoPipeState) -> dict:
             "messages": ["빌드 커맨드 없음 — 스킵"],
         }
 
+    build_timeout = node_cfg.get("timeout", 300)
     executor = create_executor("tool")
-    _emit_log(f"Phase 3: 빌드 실행 — {command}")
-    result = executor.run(command, cwd=state.get("project_path", ""))
+    _emit_log(f"Phase 3: 빌드 실행 — {command} (타임아웃: {build_timeout}초)")
+    result = executor.run(command, cwd=state.get("project_path", ""), timeout=build_timeout)
 
     _emit_log(f"Phase 3: 빌드 {'성공' if result.success else '실패'}")
     if not result.success:
@@ -145,9 +180,10 @@ def run_tests_node(state: AutoPipeState) -> dict:
             "messages": ["테스트 커맨드 없음 — 스킵"],
         }
 
+    test_timeout = node_cfg.get("timeout", 300)
     executor = create_executor("tool")
-    _emit_log(f"Phase 3: 테스트 실행 — {command}")
-    result = executor.run(command, cwd=state.get("project_path", ""))
+    _emit_log(f"Phase 3: 테스트 실행 — {command} (타임아웃: {test_timeout}초)")
+    result = executor.run(command, cwd=state.get("project_path", ""), timeout=test_timeout)
 
     errors = []
     if not result.success:

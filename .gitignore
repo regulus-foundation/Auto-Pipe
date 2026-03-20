@@ -81,9 +81,25 @@ projects/*/
 !projects/openclaw/
 
 # ──────────────────────────────────────────
-# Streamlit
+# Dev Pipeline (local-only UI auto-generation)
+# ──────────────────────────────────────────
+dev_pipeline/
+design_guide/
+run_dev_watch.sh
+DEV_PIPELINE.md
+
+# ──────────────────────────────────────────
+# Frontend (Next.js build artifacts)
+# ──────────────────────────────────────────
+.next/
+frontend/.next/
+frontend/node_modules/
+
+# ──────────────────────────────────────────
+# Streamlit (legacy)
 # ──────────────────────────────────────────
 .streamlit/
+web_streamlit/
 
 # ──────────────────────────────────────────
 # Jupyter
@@ -94,6 +110,7 @@ projects/*/
 # Logs / Temp
 # ──────────────────────────────────────────
 *.log
+logs/
 tmp/
 temp/
 

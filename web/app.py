@@ -1,4 +1,4 @@
-"""Auto-Pipe — 메인 웹 UI"""
+"""Auto-Pipe — FastAPI Backend (JSON API + SSE)"""
 
 import sys
 from pathlib import Path
@@ -6,48 +6,30 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT))
 
-import streamlit as st
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-st.set_page_config(
-    page_title="Auto-Pipe",
-    page_icon="",
-    layout="wide",
+app = FastAPI(title="Auto-Pipe", docs_url="/api/docs")
+
+# CORS for Next.js dev server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3100"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# ─── 사이드바 네비게이션 ───
-with st.sidebar:
-    st.title("Auto-Pipe")
-    st.caption("개발 자동화 파이프라인")
-    st.markdown("---")
+# Register routes
+from web.routes.pages import router as util_router
+from web.routes.bootstrap_api import router as bootstrap_router
+from web.routes.pipeline_api import router as pipeline_router
 
-    page = st.radio(
-        "메뉴",
-        ["Bootstrap", "Pipeline", "LangGraph 예제"],
-        label_visibility="collapsed",
-    )
+app.include_router(util_router)
+app.include_router(bootstrap_router, prefix="/api/bootstrap")
+app.include_router(pipeline_router, prefix="/api/pipeline")
 
-    st.markdown("---")
 
-    # 프로젝트 상태 요약
-    projects_dir = _ROOT / "projects"
-    if projects_dir.exists():
-        configured = [d.name for d in projects_dir.iterdir()
-                      if d.is_dir() and d.name != ".gitkeep"
-                      and (d / "pipeline.yaml").exists()]
-        if configured:
-            st.markdown("**설정된 프로젝트**")
-            for name in configured:
-                st.caption(f"  {name}")
-
-# ─── 페이지 렌더링 ───
-if page == "Bootstrap":
-    from web.pages.bootstrap import render
-    render()
-
-elif page == "Pipeline":
-    from web.pages.pipeline import render
-    render()
-
-elif page == "LangGraph 예제":
-    from web.pages.examples import render
-    render()
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}

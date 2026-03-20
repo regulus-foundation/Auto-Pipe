@@ -284,8 +284,8 @@ Auto-Pipe/
 +-- TODO_LIST.md                      # Task tracking
 +-- CLAUDE.md                         # Project context for AI assistants
 +-- requirements.txt                  # Python dependencies
-+-- run.sh / stop.sh / restart.sh     # Streamlit launcher scripts
-+-- docker-compose.yml                # Langfuse + supporting services
++-- run.sh                            # Launcher (Docker + Backend + Frontend)
++-- docker-compose.yml                # PostgreSQL + Langfuse services
 +-- .gitignore                        # Security-aware gitignore
 |
 +-- core/                             # Shared infrastructure
@@ -311,14 +311,18 @@ Auto-Pipe/
 |       +-- review.py                 # Phase 4: Quality + security review (api)
 |       +-- docs.py                   # Phase 5: Docs + packaging (api)
 |
-+-- web/                              # Streamlit Web UI
-|   +-- app.py                        # Main entry + sidebar navigation
-|   +-- pages/
-|       +-- bootstrap.py              # Bootstrap page
-|       +-- pipeline.py               # Pipeline execution page
-|       +-- examples.py               # LangGraph learning examples
++-- web/                              # FastAPI Backend (JSON API + SSE)
+|   +-- app.py                        # FastAPI entry point + CORS
+|   +-- run_manager.py                # Per-run state + async log queue
+|   +-- routes/
+|       +-- bootstrap_api.py          # Bootstrap REST API + SSE
+|       +-- pipeline_api.py           # Pipeline REST API + SSE
 |
-+-- examples/                         # 9 LangGraph learning patterns
++-- frontend/                         # Next.js Frontend (React + Tailwind)
+|   +-- src/app/                      # App Router pages (bootstrap, pipeline)
+|   +-- src/components/               # Reusable UI components
+|   +-- src/lib/                      # API helpers, SSE hook
+|
 +-- projects/                         # Per-project output
     +-- {name}/
         +-- project_analysis.yaml     # Analysis results

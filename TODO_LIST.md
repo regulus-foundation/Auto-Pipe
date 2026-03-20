@@ -33,11 +33,10 @@ Last updated: 2026-03-18
 
 | # | Item | File | Status | Description |
 |---|------|------|--------|-------------|
-| W-1 | Monitor page | `web/pages/monitor.py` | Open | Realtime pipeline monitoring + log viewer |
-| W-2 | History page | `web/pages/history.py` | Open | Execution history, past log browsing |
-| W-3 | Mermaid diagram | `web/components/mermaid.py` | Open | Graph visualization component |
-| W-4 | Log viewer component | `web/components/log_viewer.py` | Open | Log file viewer component |
-| W-5 | Phase tracker | `web/components/phase_tracker.py` | Open | Pipeline progress display component |
+| W-1 | Monitor page | `frontend/src/app/monitor/` | Open | Realtime pipeline monitoring dashboard |
+| W-2 | History page | `frontend/src/app/history/` | Open | Execution history, past log browsing |
+| W-3 | Mermaid diagram | `frontend/src/components/MermaidDiagram.tsx` | Open | Graph visualization component |
+| W-4 | Phase tracker | `frontend/src/components/PhaseTracker.tsx` | Open | Pipeline stage progress display |
 
 ---
 
