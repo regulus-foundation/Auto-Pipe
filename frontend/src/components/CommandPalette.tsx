@@ -3,7 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const COMMANDS = [
+interface Command {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+}
+
+const STATIC_COMMANDS: Command[] = [
   { id: "bootstrap", label: "Bootstrap", description: "Analyze a new project", href: "/bootstrap" },
   { id: "pipeline", label: "Pipeline", description: "Run development pipeline", href: "/pipeline" },
   { id: "history", label: "History", description: "View execution history", href: "/history" },
@@ -13,6 +20,7 @@ export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
+  const [commands, setCommands] = useState<Command[]>(STATIC_COMMANDS);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -31,12 +39,27 @@ export default function CommandPalette() {
   }, []);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open) {
+      inputRef.current?.focus();
+      // Load project commands dynamically
+      fetch("/api/bootstrap/projects")
+        .then((r) => r.json())
+        .then((d) => {
+          const projectCmds = (d.projects || []).map((p: any) => ({
+            id: `project-${p.name}`,
+            label: p.name,
+            description: "Project config & prompts",
+            href: `/project/${p.name}`,
+          }));
+          setCommands([...STATIC_COMMANDS, ...projectCmds]);
+        })
+        .catch(() => {});
+    }
   }, [open]);
 
   if (!open) return null;
 
-  const filtered = COMMANDS.filter(
+  const filtered = commands.filter(
     (c) =>
       c.label.toLowerCase().includes(query.toLowerCase()) ||
       c.description.toLowerCase().includes(query.toLowerCase())
