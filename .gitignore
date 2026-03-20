@@ -84,7 +84,6 @@ projects/*/
 # Dev Pipeline (local-only UI auto-generation)
 # ──────────────────────────────────────────
 dev_pipeline/
-design_guide/
 run_dev_watch.sh
 DEV_PIPELINE.md
 
