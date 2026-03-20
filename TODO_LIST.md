@@ -1,6 +1,6 @@
 # Auto-Pipe TODO List
 
-Last updated: 2026-03-18
+Last updated: 2026-03-20
 
 ---
 
@@ -26,17 +26,27 @@ Last updated: 2026-03-18
 | C-3 | Pre-build + pre-test check | 03-18 | Baseline check before pipeline. Pre-existing errors skip fix loop |
 | C-4 | Infra/IaC project support | 03-18 | Terraform, Helm, Kustomize, Ansible, ArgoCD detection + command mapping |
 | C-5 | Deep Analysis in prompts | 03-18 | Architecture/conventions/test strategy injected into prompt templates |
+| C-6 | Web UI: Streamlit → FastAPI + Next.js | 03-20 | Full migration to FastAPI backend (JSON API + SSE) + Next.js React frontend |
+| C-7 | Dark theme design system | 03-20 | Vercel/Linear/shadcn-inspired: zinc palette, Inter + JetBrains Mono, component library |
+| C-8 | History page | 03-20 | Execution history table + project log viewer with pagination |
+| C-9 | Pipeline queuing | 03-20 | Per-project FIFO queue, sequential execution, queue status in UI |
+| C-10 | Design phase scoping | 03-20 | API pre-analysis extracts relevant code paths before Console design generation |
+| C-11 | Command palette (Cmd+K) | 03-20 | Glassmorphism overlay, keyboard navigation |
+| C-12 | Toast notifications | 03-20 | Success/error/info with auto-dismiss |
+| C-13 | Skeleton loading | 03-20 | Shimmer animation for data-fetching pages |
+| C-14 | SSE auto-reconnect | 03-20 | Exponential backoff retry on connection loss |
+| C-15 | PostgresSaver checkpointer | 03-18 | LangGraph state persistence via PostgreSQL |
 
 ---
 
-## 3. Web UI (WEB_UI_DESIGN.md)
+## 3. Web UI
 
 | # | Item | File | Status | Description |
 |---|------|------|--------|-------------|
-| W-1 | Monitor page | `frontend/src/app/monitor/` | Open | Realtime pipeline monitoring dashboard |
-| W-2 | History page | `frontend/src/app/history/` | Open | Execution history, past log browsing |
-| W-3 | Mermaid diagram | `frontend/src/components/MermaidDiagram.tsx` | Open | Graph visualization component |
-| W-4 | Phase tracker | `frontend/src/components/PhaseTracker.tsx` | Open | Pipeline stage progress display |
+| W-1 | Mermaid diagram | `frontend/src/components/MermaidDiagram.tsx` | Open | Pipeline graph visualization component |
+| W-2 | Phase tracker | `frontend/src/components/PhaseTracker.tsx` | Open | Visual pipeline stage progress (stage dots + connectors) |
+| W-3 | Run history persistence | DB table | Open | Save run history to PostgreSQL (currently in-memory only) |
+| W-4 | Settings page | `frontend/src/app/settings/` | Open | Environment config, model selection, project management |
 
 ---
 
@@ -45,10 +55,9 @@ Last updated: 2026-03-18
 | # | Item | Status | Description |
 |---|------|--------|-------------|
 | P-1 | Phase 6: Incident response | Open | Separate graph -- log collection -> root cause -> action plan -> execute |
-| P-2 | Checkpointer upgrade | Open | MemorySaver -> SqliteSaver -> PostgresSaver |
-| P-3 | Error handling improvements | Open | LLM timeout exponential backoff, Console fallback, tool retry |
-| P-4 | `fix_code` dedicated prompt | Open | Currently reuses `develop_code.md` -> needs dedicated `fix_code.md` template |
-| P-5 | fix_code scope awareness | Open | fix_code should focus on build errors, not repeat "already done" |
+| P-2 | Error handling improvements | Open | LLM timeout exponential backoff, Console fallback, tool retry |
+| P-3 | `fix_code` dedicated prompt | Open | Currently reuses `develop_code.md` -> needs dedicated `fix_code.md` template |
+| P-4 | fix_code scope awareness | Open | fix_code should focus on build errors, not repeat "already done" |
 
 ---
 
@@ -68,23 +77,21 @@ Last updated: 2026-03-18
 | # | Item | Timeline | Status | Description |
 |---|------|----------|--------|-------------|
 | I-1 | Multi-project support | Mid | Done | `projects/{name}/` structure |
-| I-2 | Execution history persistence | Mid | Open | SqliteSaver + History page integration |
+| I-2 | Execution history persistence | Mid | Open | PostgreSQL table + History page integration |
 | I-3 | Git integration (auto PR) | Long | Open | Auto branch + PR after pipeline completion |
 | I-4 | Slack/Teams notification | Long | Open | Integrate with channel gateway |
 | I-5 | RAG integration | Long | Open | Vector DB for internal code/wiki reference |
 | I-6 | Prompt A/B testing | Long | Open | Compare quality across different prompts |
 | I-7 | Learning loop | Long | Open | Accumulate review/incident data -> improve next project |
-| I-8 | File logging system | - | Done | `projects/{name}/log/pipeline-{ts}.log` |
-| I-9 | Infra project support | - | Done | Terraform, Helm, Kustomize, Ansible detection |
 
 ---
 
 ## Priority Suggestion
 
 ```
-1st: B-3, B-6, P-5  -- fix_code quality (practical blocker)
-2nd: P-4             -- fix_code dedicated prompt
-3rd: W-1, W-2        -- Monitor/History pages (leverage logs)
-4th: G-1             -- Telegram bot MVP
-5th: P-2, I-2        -- Checkpointer + history persistence
+1st: B-3, B-6, P-4  -- fix_code quality (practical blocker)
+2nd: P-3             -- fix_code dedicated prompt
+3rd: W-3, I-2        -- Run history persistence (DB)
+4th: W-1, W-2        -- Mermaid diagram + Phase tracker
+5th: G-1             -- Telegram bot MVP
 ```
